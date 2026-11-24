@@ -3,7 +3,7 @@ import {
   TrendingUp, AlertTriangle, CheckCircle2, Clock, 
   Send, RefreshCw, Upload, Download, Bell, ShieldAlert,
   Search, Filter, ChevronRight, UserCheck, XCircle, Database, Plus, Check,
-  Package, Star, Award, Layers, Users, Edit3
+  Package, Star, Award, Layers, Users, Edit3, List, LayoutGrid, Phone, Mail, UserPlus, X, ShieldCheck
 } from 'lucide-react';
 import VendorCatalogModal from './VendorCatalogModal';
 
@@ -19,14 +19,24 @@ export default function AdminDashboard({
   currentUser,
   skuMaster = [],
   onSaveCatalog,
-  onUpdateVendorRatings
+  onUpdateVendorRatings,
+  onAddVendor
 }) {
   const [activeSubTab, setActiveSubTab] = useState('indent'); // 'indent', 'vendors', 'sku_master'
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
 
-  // Vendor Catalog modal state
+  // Vendor Catalog & Directory state
+  const [vendorSearchTerm, setVendorSearchTerm] = useState('');
+  const [vendorViewMode, setVendorViewMode] = useState('table'); // 'table' or 'cards'
+  const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
+  const [newVendor, setNewVendor] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    supplied_skus: ['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03']
+  });
   const [editingCatalogVendor, setEditingCatalogVendor] = useState(null);
 
   // Rating editing state
@@ -46,6 +56,37 @@ export default function AdminDashboard({
 
   const isAdmin = currentUser?.role === 'ADMIN';
   const isSourcing = currentUser?.role === 'SOURCING' || isAdmin;
+
+  const handleCreateVendorSubmit = async (e) => {
+    e.preventDefault();
+    if (!newVendor.name || !newVendor.email) return;
+    if (onAddVendor) {
+      const res = await onAddVendor(newVendor);
+      if (res?.success) {
+        setIsAddVendorOpen(false);
+        setNewVendor({
+          name: '',
+          email: '',
+          phone: '',
+          supplied_skus: ['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03']
+        });
+      }
+    }
+  };
+
+  const filteredVendors = (vendors || []).filter(v => {
+    if (!v) return false;
+    const term = vendorSearchTerm.trim().toLowerCase();
+    if (!term) return true;
+    const nameMatch = v.name?.toLowerCase().includes(term);
+    const emailMatch = v.email?.toLowerCase().includes(term);
+    const phoneMatch = v.phone?.includes(term);
+    const skuMatch = (v.supplied_skus || []).some(code => {
+      const item = skuMaster.find(s => s.sku_code === code);
+      return code.toLowerCase().includes(term) || (item && item.item_name.toLowerCase().includes(term));
+    });
+    return nameMatch || emailMatch || phoneMatch || skuMatch;
+  });
 
   const handleCreateSku = async (e) => {
     e.preventDefault();
@@ -210,11 +251,17 @@ export default function AdminDashboard({
           </p>
         </div>
 
-        {/* Registered Suppliers */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl">
+        {/* Registered Suppliers (Clickable to switch tab) */}
+        <div 
+          onClick={() => setActiveSubTab('vendors')}
+          className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 p-5 rounded-3xl cursor-pointer transition group shadow-sm"
+          title="Click to view full Vendors Directory"
+        >
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Active Suppliers</span>
-            <Users size={18} className="text-teal-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider group-hover:text-emerald-400 transition">
+              Active Suppliers (Click to View)
+            </span>
+            <Users size={18} className="text-teal-400 group-hover:scale-110 transition" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-white">
@@ -222,9 +269,8 @@ export default function AdminDashboard({
             </span>
             <span className="text-xs text-slate-400">mapped with catalogues</span>
           </div>
-          <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
-            <CheckCircle2 size={12} className="text-emerald-400" />
-            <span>Segregated demand distribution</span>
+          <p className="text-xs text-emerald-400 mt-3 flex items-center gap-1 font-medium">
+            <span>View All Suppliers & Catalogues →</span>
           </p>
         </div>
       </div>
@@ -233,12 +279,13 @@ export default function AdminDashboard({
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveSubTab('indent')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
             activeSubTab === 'indent'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
           }`}
         >
+          <Layers size={14} />
           <span>Live Indent & L1 Bidding Board</span>
           <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px]">
             {indent?.items?.length || 0}
@@ -247,16 +294,16 @@ export default function AdminDashboard({
 
         <button
           onClick={() => setActiveSubTab('vendors')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
             activeSubTab === 'vendors'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
           }`}
         >
-          <Package size={14} />
-          <span>Supplier Catalogues & 4-Pillar Ratings</span>
-          <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px]">
-            {vendors.length}
+          <Users size={14} />
+          <span>Vendors Directory & Catalogues</span>
+          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[10px] font-bold">
+            {vendors.length} Vendors
           </span>
         </button>
 
@@ -513,113 +560,434 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* TAB 2: Supplier Catalogues & 4-Pillar Ratings */}
+      {/* TAB 2: Registered Vendors Directory & Catalogues */}
       {activeSubTab === 'vendors' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-4 rounded-3xl">
+          {/* Header Controls: Title, Search, View Switcher, Add Vendor */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-3xl">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Package size={16} className="text-emerald-400" />
-                <span>Supplier Supply Catalogues & Performance Ratings</span>
+                <Users size={16} className="text-emerald-400" />
+                <span>Registered Suppliers & Mandi Directory</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  {filteredVendors.length} of {vendors.length} Vendors
+                </span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Each supplier only receives requirements for articles in their catalogue. Bids with identical prices are tied-broken by their 4-pillar ratings.
+                All suppliers verified for Pluckk procurement. Indents are distributed based on what each vendor supplies.
               </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search Vendor */}
+              <div className="relative min-w-[200px]">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search vendor, email, article..."
+                  value={vendorSearchTerm}
+                  onChange={(e) => setVendorSearchTerm(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+
+              {/* View Mode Toggle (Table / List vs Cards) */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  onClick={() => setVendorViewMode('table')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                    vendorViewMode === 'table'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="List / Table View"
+                >
+                  <List size={14} />
+                  <span>List View</span>
+                </button>
+                <button
+                  onClick={() => setVendorViewMode('cards')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                    vendorViewMode === 'cards'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Cards Grid View"
+                >
+                  <LayoutGrid size={14} />
+                  <span>Cards View</span>
+                </button>
+              </div>
+
+              {/* Add New Vendor Button */}
+              <button
+                onClick={() => setIsAddVendorOpen(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+              >
+                <UserPlus size={14} />
+                <span>+ Onboard Vendor</span>
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {vendors.map((v) => {
-              const ratings = v.ratings || { quality: 4.5, price: 4.5, fill_rate: 4.5, delivery_time: 4.5 };
-              const composite = v.compositeRating || 4.5;
-              const suppliedCount = (v.supplied_skus || []).length;
+          {/* VIEW 1: Table / List View (Clean Data List of all Vendors) */}
+          {vendorViewMode === 'table' && (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                      <th className="py-3.5 px-4">Supplier & ID</th>
+                      <th className="py-3.5 px-4">Contact Info</th>
+                      <th className="py-3.5 px-4">Supply Catalogue</th>
+                      <th className="py-3.5 px-4 text-center">Quality</th>
+                      <th className="py-3.5 px-4 text-center">Price</th>
+                      <th className="py-3.5 px-4 text-center">Fill Rate</th>
+                      <th className="py-3.5 px-4 text-center">Delivery</th>
+                      <th className="py-3.5 px-4 text-center">Composite Score</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredVendors.map((v) => {
+                      const ratings = v.ratings || { quality: 4.5, price: 4.5, fill_rate: 4.5, delivery_time: 4.5 };
+                      const composite = v.compositeRating || 4.5;
+                      const suppliedCount = (v.supplied_skus || []).length;
 
-              return (
-                <div key={v.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
-                  {/* Top: Name, Contact & Composite Score */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-bold text-white text-base">{v.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono mt-0.5">{v.email} • {v.phone}</p>
-                    </div>
+                      return (
+                        <tr key={v.id} className="hover:bg-slate-800/40 transition">
+                          {/* Supplier Name & Badge */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-white text-sm flex items-center gap-1.5">
+                              <span>{v.name}</span>
+                              <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">
+                                {v.id}
+                              </span>
+                            </div>
+                            <span className="inline-block mt-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.2 rounded-md font-medium">
+                              ✓ 1-to-1 Verified
+                            </span>
+                          </td>
 
-                    <div className="text-right">
-                      <div className="flex items-center gap-1 text-amber-400 font-bold text-base bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-xl">
-                        <Star size={15} className="fill-amber-400 text-amber-400" />
-                        <span>{composite}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">Composite Score</span>
-                    </div>
-                  </div>
+                          {/* Contact Info */}
+                          <td className="py-3.5 px-4">
+                            <div className="text-slate-300 font-mono text-xs flex items-center gap-1">
+                              <Mail size={12} className="text-slate-500 shrink-0" />
+                              <span className="truncate max-w-[180px]">{v.email}</span>
+                            </div>
+                            <div className="text-slate-400 text-[11px] mt-0.5 flex items-center gap-1 font-mono">
+                              <Phone size={11} className="text-slate-500 shrink-0" />
+                              <span>{v.phone || '+91 98xxx xxxxx'}</span>
+                            </div>
+                          </td>
 
-                  {/* 4 Rating Pillars Breakdown */}
-                  <div className="grid grid-cols-4 gap-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase">Quality</span>
-                      <strong className="text-xs text-white">★{ratings.quality}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase">Price</span>
-                      <strong className="text-xs text-white">★{ratings.price}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase">Fill Rate</span>
-                      <strong className="text-xs text-white">★{ratings.fill_rate}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block uppercase">Delivery</span>
-                      <strong className="text-xs text-white">★{ratings.delivery_time}</strong>
-                    </div>
-                  </div>
+                          {/* Supply Catalogue */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <Package size={13} className="text-emerald-400 shrink-0" />
+                              <span className="font-semibold text-slate-200">{suppliedCount} articles</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {(v.supplied_skus || []).slice(0, 3).map((code) => {
+                                const item = skuMaster.find(s => s.sku_code === code);
+                                return (
+                                  <span key={code} className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">
+                                    {item ? item.item_name.split(' ')[0] : code}
+                                  </span>
+                                );
+                              })}
+                              {suppliedCount > 3 && (
+                                <span className="text-[10px] text-slate-400 bg-slate-800/60 px-1 py-0.5 rounded">
+                                  +{suppliedCount - 3} more
+                                </span>
+                              )}
+                              {suppliedCount === 0 && (
+                                <span className="text-[11px] text-slate-500 italic">No articles mapped</span>
+                              )}
+                            </div>
+                          </td>
 
-                  {/* Supply Catalog Summary */}
-                  <div>
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-slate-400 font-semibold flex items-center gap-1.5">
-                        <Package size={14} className="text-emerald-400" />
-                        <span>Supply Catalogue ({suppliedCount} Articles)</span>
-                      </span>
+                          {/* 4 Pillars */}
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                            ★{ratings.quality}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                            ★{ratings.price}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                            ★{ratings.fill_rate}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                            ★{ratings.delivery_time}
+                          </td>
 
-                      <button
-                        onClick={() => setEditingCatalogVendor(v)}
-                        className="text-emerald-400 hover:underline font-semibold flex items-center gap-1"
-                      >
-                        <Edit3 size={12} />
-                        <span>Edit Catalogue</span>
-                      </button>
-                    </div>
+                          {/* Composite Rating */}
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-flex items-center gap-1 font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-xl">
+                              <Star size={12} className="fill-amber-400 text-amber-400" />
+                              <span>{composite}</span>
+                            </span>
+                          </td>
 
-                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-                      {(v.supplied_skus || []).map((code) => {
-                        const item = skuMaster.find(s => s.sku_code === code);
-                        return (
-                          <span key={code} className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700/80 px-2 py-0.5 rounded-lg">
-                            {item ? item.item_name.split(' ')[0] : code}
+                          {/* Action Buttons */}
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setEditingCatalogVendor(v)}
+                                className="px-2.5 py-1 text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg border border-emerald-500/30 transition flex items-center gap-1"
+                                title="Manage what articles this vendor supplies"
+                              >
+                                <Package size={12} />
+                                <span>Catalogue</span>
+                              </button>
+
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleOpenRatingsModal(v)}
+                                  className="px-2.5 py-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition flex items-center gap-1"
+                                  title="Adjust 4-Pillar Ratings"
+                                >
+                                  <Star size={12} className="text-amber-400" />
+                                  <span>Ratings</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {filteredVendors.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="py-12 text-center text-slate-400">
+                          <Users size={32} className="mx-auto text-slate-600 mb-2" />
+                          <p className="text-sm font-semibold">No suppliers found matching "{vendorSearchTerm}"</p>
+                          <p className="text-xs text-slate-500 mt-1">Try a different name, email, or click "+ Onboard Vendor" to register them.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 2: Cards View (Visual 4-Pillar Metric Cards) */}
+          {vendorViewMode === 'cards' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredVendors.map((v) => {
+                const ratings = v.ratings || { quality: 4.5, price: 4.5, fill_rate: 4.5, delivery_time: 4.5 };
+                const composite = v.compositeRating || 4.5;
+                const suppliedCount = (v.supplied_skus || []).length;
+
+                return (
+                  <div key={v.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm hover:border-slate-700 transition">
+                    {/* Top: Name, Contact & Composite Score */}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white text-base">{v.name}</h4>
+                          <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">
+                            {v.id}
                           </span>
+                        </div>
+                        <p className="text-xs text-slate-400 font-mono mt-0.5">{v.email} • {v.phone || '+91 98xxx xxxxx'}</p>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="flex items-center gap-1 text-amber-400 font-bold text-base bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-xl">
+                          <Star size={15} className="fill-amber-400 text-amber-400" />
+                          <span>{composite}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">Composite Score</span>
+                      </div>
+                    </div>
+
+                    {/* 4 Rating Pillars Breakdown */}
+                    <div className="grid grid-cols-4 gap-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">Quality</span>
+                        <strong className="text-xs text-white">★{ratings.quality}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">Price</span>
+                        <strong className="text-xs text-white">★{ratings.price}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">Fill Rate</span>
+                        <strong className="text-xs text-white">★{ratings.fill_rate}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">Delivery</span>
+                        <strong className="text-xs text-white">★{ratings.delivery_time}</strong>
+                      </div>
+                    </div>
+
+                    {/* Supply Catalog Summary */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-slate-400 font-semibold flex items-center gap-1.5">
+                          <Package size={14} className="text-emerald-400" />
+                          <span>Supply Catalogue ({suppliedCount} Articles)</span>
+                        </span>
+
+                        <button
+                          onClick={() => setEditingCatalogVendor(v)}
+                          className="text-emerald-400 hover:underline font-semibold flex items-center gap-1"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit Catalogue</span>
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                        {(v.supplied_skus || []).map((code) => {
+                          const item = skuMaster.find(s => s.sku_code === code);
+                          return (
+                            <span key={code} className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700/80 px-2 py-0.5 rounded-lg">
+                              {item ? item.item_name.split(' ')[0] : code}
+                            </span>
+                          );
+                        })}
+                        {suppliedCount === 0 && (
+                          <span className="text-xs text-slate-500 italic">No articles mapped yet. Click Edit to map.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Admin Action: Adjust 4 Pillars */}
+                    {isAdmin && (
+                      <div className="pt-2 border-t border-slate-800 flex justify-end">
+                        <button
+                          onClick={() => handleOpenRatingsModal(v)}
+                          className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                        >
+                          <span>Adjust 4-Pillar Ratings</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Modal: Onboard / Add New Vendor */}
+          {isAddVendorOpen && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                      <UserPlus size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white">Onboard New Supplier</h3>
+                      <p className="text-xs text-slate-400">Add a new Mandi trader or supplier to Pluckk</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsAddVendorOpen(false)} className="text-slate-400 hover:text-white p-1">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateVendorSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                      Supplier / Trader Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mahindroo Fresh Produce / Ramesh Mandi"
+                      value={newVendor.name}
+                      onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                      Supplier Work Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="vendor@gmail.com or mandi@yahoo.com"
+                      value={newVendor.email}
+                      onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">
+                      Non-pluckk emails automatically receive restricted 1-to-1 Supplier portal view.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                      Phone Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="+91 98200 xxxxx"
+                      value={newVendor.phone}
+                      onChange={(e) => setNewVendor({ ...newVendor, phone: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                      Initial Supply Catalogue (Select items they supply):
+                    </label>
+                    <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-slate-950 rounded-xl border border-slate-800">
+                      {skuMaster.map((sku) => {
+                        const checked = newVendor.supplied_skus.includes(sku.sku_code);
+                        return (
+                          <label
+                            key={sku.sku_code}
+                            className={`flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition ${
+                              checked ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'text-slate-400 hover:bg-slate-900'
+                            }`}
+                          >
+                            <span className="font-medium">{sku.item_name}</span>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const list = checked
+                                  ? newVendor.supplied_skus.filter(c => c !== sku.sku_code)
+                                  : [...newVendor.supplied_skus, sku.sku_code];
+                                setNewVendor({ ...newVendor, supplied_skus: list });
+                              }}
+                              className="accent-emerald-500"
+                            />
+                          </label>
                         );
                       })}
-                      {suppliedCount === 0 && (
-                        <span className="text-xs text-slate-500 italic">No articles mapped yet. Click Edit to map.</span>
-                      )}
                     </div>
                   </div>
 
-                  {/* Admin Action: Adjust 4 Pillars */}
-                  {isAdmin && (
-                    <div className="pt-2 border-t border-slate-800 flex justify-end">
-                      <button
-                        onClick={() => handleOpenRatingsModal(v)}
-                        className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
-                      >
-                        <span>Adjust 4-Pillar Ratings</span>
-                        <ChevronRight size={13} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddVendorOpen(false)}
+                      className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm transition"
+                    >
+                      Onboard Supplier
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* Edit Vendor Catalog Modal */}
           {editingCatalogVendor && (

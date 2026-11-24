@@ -17,7 +17,8 @@ export default function SplitViewSimulator({
   currentUser,
   skuMaster,
   onSaveCatalog,
-  onUpdateVendorRatings
+  onUpdateVendorRatings,
+  onAddVendor
 }) {
   const [vendor1Id, setVendor1Id] = useState('v1'); // Ramesh
   const [vendor2Id, setVendor2Id] = useState('v2'); // Suresh
@@ -73,6 +74,7 @@ export default function SplitViewSimulator({
             skuMaster={skuMaster}
             onSaveCatalog={onSaveCatalog}
             onUpdateVendorRatings={onUpdateVendorRatings}
+            onAddVendor={onAddVendor}
           />
         </div>
 

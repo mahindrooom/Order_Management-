@@ -196,6 +196,15 @@ function MainApp() {
       showToast(`${data.vendor_name}'s catalogue updated (${data.supplied_skus.length} articles)`, 'info');
     });
 
+    s.on('vendor:added', (data) => {
+      setVendors(prev => {
+        const list = Array.isArray(prev) ? prev : [];
+        if (list.some(v => v && v.id === data.vendor?.id)) return list;
+        return [...list, data.vendor];
+      });
+      showToast(`New supplier added: ${data.vendor?.name}`, 'info');
+    });
+
     s.on('notification:sos', (data) => {
       if (data.log) {
         setLogs(prev => [...prev.slice(-49), data.log]);
@@ -285,6 +294,29 @@ function MainApp() {
     } catch (e) {
       console.error('Error saving catalogue:', e);
       showToast('Error saving catalogue. Check network connection.', 'critical');
+    }
+  };
+
+  // Onboard / Add a new vendor (Admin & Sourcing)
+  const handleCreateVendor = async (vendorData) => {
+    try {
+      const res = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add vendor');
+      setVendors(prev => {
+        const list = Array.isArray(prev) ? prev : [];
+        if (list.some(v => v && v.id === data.vendor?.id)) return list;
+        return [...list, data.vendor];
+      });
+      showToast(`Supplier ${data.vendor?.name} onboarded successfully!`, 'success');
+      return { success: true, vendor: data.vendor };
+    } catch (err) {
+      showToast(err.message, 'critical');
+      return { success: false, error: err.message };
     }
   };
 
@@ -489,6 +521,7 @@ function MainApp() {
             skuMaster={skuMaster}
             onSaveCatalog={handleSaveCatalog}
             onUpdateVendorRatings={handleUpdateVendorRatings}
+            onAddVendor={handleCreateVendor}
           />
         )}
 
@@ -507,6 +540,7 @@ function MainApp() {
               skuMaster={skuMaster}
               onSaveCatalog={handleSaveCatalog}
               onUpdateVendorRatings={handleUpdateVendorRatings}
+              onAddVendor={handleCreateVendor}
             />
             <NotificationFeed logs={logs} />
           </div>

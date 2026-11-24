@@ -250,6 +250,44 @@ app.get('/api/vendors', (req, res) => {
   res.json(vendors);
 });
 
+// Add / Onboard a new vendor (Admin & Sourcing)
+app.post('/api/vendors', (req, res) => {
+  const { name, email, phone, supplied_skus, ratings } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Vendor name and email are required' });
+  }
+
+  const db = readDb();
+  if (!db.vendors) db.vendors = [];
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = db.vendors.find(v => v.email && v.email.toLowerCase() === normalizedEmail);
+  if (existing) {
+    return res.status(400).json({ error: 'A vendor with this email already exists' });
+  }
+
+  const newVendor = {
+    id: 'v-' + Date.now().toString().slice(-4),
+    name: name.trim(),
+    email: normalizedEmail,
+    phone: phone ? phone.trim() : '+91 98xxx xxxxx',
+    supplied_skus: Array.isArray(supplied_skus) ? supplied_skus : ['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03'],
+    ratings: ratings || { quality: 4.8, price: 4.8, fill_rate: 4.8, delivery_time: 4.8 }
+  };
+
+  db.vendors.push(newVendor);
+  writeDb(db);
+
+  const enriched = {
+    ...newVendor,
+    compositeRating: getCompositeRating(newVendor.ratings)
+  };
+
+  io.emit('vendor:added', { vendor: enriched });
+
+  res.json({ success: true, vendor: enriched });
+});
+
 // Update a vendor's supply catalogue (What they supply)
 app.post('/api/vendors/:id/catalog', (req, res) => {
   const vendorId = req.params.id;
