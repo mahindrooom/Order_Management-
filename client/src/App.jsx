@@ -163,7 +163,7 @@ function MainApp() {
       setSummary(data.summary);
       if (data.log) {
         setLogs(prev => [...prev.slice(-49), data.log]);
-        showToast(data.log.title, data.log.severity);
+        showToast(data.log.title, data.log.message, data.log.severity);
       }
     });
 
@@ -178,7 +178,7 @@ function MainApp() {
       setSummary(data.summary);
       if (data.log) {
         setLogs(prev => [...prev.slice(-49), data.log]);
-        showToast(data.log.title, data.log.severity);
+        showToast(data.log.title, data.log.message, data.log.severity);
       }
     });
 
@@ -193,7 +193,7 @@ function MainApp() {
         }
         return list;
       });
-      showToast(`${data.vendor_name}'s catalogue updated (${data.supplied_skus.length} articles)`, 'info');
+      showToast('Catalogue Updated', `${data.vendor_name}'s catalogue updated (${data.supplied_skus.length} articles)`, 'info');
     });
 
     s.on('vendor:added', (data) => {
@@ -202,18 +202,18 @@ function MainApp() {
         if (list.some(v => v && v.id === data.vendor?.id)) return list;
         return [...list, data.vendor];
       });
-      showToast(`New supplier added: ${data.vendor?.name}`, 'info');
+      showToast('Supplier Onboarded', `New supplier added: ${data.vendor?.name}`, 'info');
     });
 
     s.on('notification:sos', (data) => {
       if (data.log) {
         setLogs(prev => [...prev.slice(-49), data.log]);
-        showToast(data.log.title, 'warning');
+        showToast(data.log.title, data.log.message, 'warning');
       }
     });
 
     s.on('error:response', (data) => {
-      showToast(data.message, 'critical');
+      showToast('Alert', data.message, 'critical');
     });
 
     setSocket(s);
@@ -223,31 +223,86 @@ function MainApp() {
     };
   }, []);
 
-  const showToast = (message, severity = 'info') => {
-    setToast({ message, severity, id: Date.now() });
+  // Web Audio Synthesizer Chime for Real-Time Mandi Notifications
+  const playMandiNotificationSound = (severity = 'info') => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-    // Native vibration on vendor mobile device
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      if (severity === 'critical' || severity === 'warning') {
-        navigator.vibrate([200, 100, 200]);
+      if (severity === 'critical') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.18); // A5
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
       }
+    } catch (e) {
+      // Audio autoplay may be muted until interaction
+    }
+  };
+
+  const showToast = (arg1, arg2 = '', arg3 = 'info') => {
+    let title = arg1;
+    let message = arg2;
+    let severity = arg3;
+
+    if (arg2 === 'info' || arg2 === 'success' || arg2 === 'warning' || arg2 === 'critical') {
+      severity = arg2;
+      message = arg1;
+      title = severity === 'critical' ? 'Urgent Alert' : severity === 'warning' ? 'Mandi Alert' : severity === 'success' ? 'Success' : 'Procurement Update';
     }
 
-    // Native push notification if vendor enabled alerts
+    setToast({ title, message: message || title, severity, id: Date.now() });
+
+    // 1. Play alert chime
+    playMandiNotificationSound(severity);
+
+    // 2. Hardware vibration on mobile phones
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+
+    // 3. Android Chrome ServiceWorker Push Notification
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification(severity === 'critical' ? '🚨 Pluckk Urgent Alert' : '🥬 Pluckk Procurement Update', {
-          body: message,
-          icon: '/favicon.svg'
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(title, {
+            body: message || title,
+            icon: '/favicon.svg',
+            badge: '/favicon.svg',
+            vibrate: [200, 100, 200]
+          });
+        }).catch(() => {
+          try {
+            new Notification(title, { body: message || title, icon: '/favicon.svg' });
+          } catch (e) {}
         });
-      } catch (e) {
-        // ignore
+      } else {
+        try {
+          new Notification(title, { body: message || title, icon: '/favicon.svg' });
+        } catch (e) {}
       }
     }
 
     setTimeout(() => {
       setToast(null);
-    }, 4500);
+    }, 6000);
   };
 
   const handleLogout = () => {
@@ -584,31 +639,40 @@ function MainApp() {
         )}
       </main>
 
-      {/* Floating Real-Time Toast Notification */}
+      {/* Floating Real-Time Top Push Notification Banner (Optimized for Mobile & Desktop) */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className={`p-4 rounded-2xl shadow-2xl border text-sm max-w-md flex items-start gap-3 ${
+        <div className="fixed top-4 left-3 right-3 sm:left-auto sm:right-6 sm:top-6 sm:max-w-md z-50 animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className={`p-4 rounded-3xl shadow-2xl border text-sm flex items-start gap-3 backdrop-blur-md ${
             toast.severity === 'critical'
-              ? 'bg-red-950 border-red-500 text-white'
+              ? 'bg-red-950/95 border-red-500 text-white shadow-red-950/50'
               : toast.severity === 'warning'
-              ? 'bg-amber-950 border-amber-500 text-amber-100'
+              ? 'bg-amber-950/95 border-amber-500 text-amber-100 shadow-amber-950/50'
               : toast.severity === 'success'
-              ? 'bg-emerald-950 border-emerald-500 text-emerald-100'
-              : 'bg-slate-900 border-slate-700 text-white'
+              ? 'bg-emerald-950/95 border-emerald-500 text-emerald-100 shadow-emerald-950/50'
+              : 'bg-slate-900/95 border-slate-700 text-white shadow-slate-950/50'
           }`}>
             {toast.severity === 'critical' ? (
-              <ShieldAlert size={20} className="text-red-400 shrink-0 mt-0.5" />
+              <ShieldAlert size={22} className="text-red-400 shrink-0 mt-0.5" />
             ) : toast.severity === 'warning' ? (
-              <AlertTriangle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle size={22} className="text-amber-400 shrink-0 mt-0.5" />
             ) : (
-              <CheckCircle2 size={20} className="text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 size={22} className="text-emerald-400 shrink-0 mt-0.5" />
             )}
-            <div>
-              <div className="font-bold text-xs uppercase tracking-wider opacity-75">
-                {toast.severity === 'critical' ? 'Urgent Alert' : 'Procurement Broadcast'}
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-xs uppercase tracking-wider opacity-90 flex items-center justify-between">
+                <span>{toast.title || (toast.severity === 'critical' ? 'Urgent Alert' : 'Procurement Broadcast')}</span>
+                <span className="text-[10px] opacity-60">Live Now</span>
               </div>
-              <div className="text-xs font-semibold mt-0.5 leading-snug">{toast.message}</div>
+              <div className="text-xs font-semibold mt-1 leading-snug text-slate-100">
+                {toast.message}
+              </div>
             </div>
+            <button 
+              onClick={() => setToast(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg text-xs"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
