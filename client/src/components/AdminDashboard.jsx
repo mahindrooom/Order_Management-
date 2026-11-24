@@ -34,7 +34,7 @@ export default function AdminDashboard({
 
   const fetchSkuMaster = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/sku-master');
+      const res = await fetch('/api/sku-master');
       const data = await res.json();
       setSkuMaster(data);
     } catch (e) {
@@ -51,7 +51,7 @@ export default function AdminDashboard({
     if (!newSku.sku_code || !newSku.item_name) return;
 
     try {
-      const res = await fetch('http://localhost:4000/api/sku-master', {
+      const res = await fetch('/api/sku-master', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSku)
@@ -105,7 +105,7 @@ export default function AdminDashboard({
           </button>
 
           <a
-            href="http://localhost:4000/api/export-po"
+            href="/api/export-po"
             download
             className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition shadow-sm"
           >

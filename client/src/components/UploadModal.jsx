@@ -19,7 +19,7 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess }) {
     formData.append('file', file);
 
     try {
-      const res = await fetch('http://localhost:4000/api/upload-indent', {
+      const res = await fetch('/api/upload-indent', {
         method: 'POST',
         body: formData
       });

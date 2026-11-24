@@ -12,7 +12,7 @@ import {
   Layers, RefreshCw, LogOut, ShieldCheck, User
 } from 'lucide-react';
 
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '/';
+const SOCKET_URL = undefined;
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -166,7 +166,7 @@ export default function App() {
   // Admin Action: Reset
   const handleReset = async () => {
     try {
-      await fetch('http://localhost:4000/api/reset', { method: 'POST' });
+      await fetch('/api/reset', { method: 'POST' });
     } catch (e) {
       console.error(e);
     }
