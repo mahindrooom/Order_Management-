@@ -152,16 +152,16 @@ export default function VendorPortal({
                   </div>
                 </div>
 
-                {/* 5:00 AM Crisis Simulation Button */}
+                {/* Instant Shortfall / Release Button */}
                 <button
                   onClick={() => {
                     setBackoutSku(c);
                     setBackoutDropQty(c.committed_qty.toString());
                   }}
                   className="px-2.5 py-1.5 text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition shrink-0"
-                  title="Simulate 5:00 AM shortfall when you cannot supply"
+                  title="Report stock shortfall or release your allocation"
                 >
-                  Report Shortage (5 AM)
+                  Report Shortfall / Release
                 </button>
               </div>
             ))}
@@ -310,7 +310,7 @@ export default function VendorPortal({
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5 text-red-400 font-bold">
                 <AlertTriangle size={20} />
-                <span>5:00 AM Mandi Shortage Report</span>
+                <span>Report Stock Shortfall / Release Demand</span>
               </div>
               <button onClick={() => setBackoutSku(null)} className="text-slate-400 hover:text-white">
                 <X size={18} />
@@ -318,7 +318,7 @@ export default function VendorPortal({
             </div>
 
             <p className="text-xs text-slate-300">
-              Reporting a stock issue for <strong>{backoutSku.item_name}</strong>. The system will immediately notify Pluckk and reopen the demand to backup suppliers.
+              Reporting a stock issue or release for <strong>{backoutSku.item_name}</strong>. The system will immediately notify Pluckk and reopen the demand to alternative suppliers.
             </p>
 
             <form onSubmit={handleBackoutSubmit} className="space-y-3">
@@ -338,7 +338,7 @@ export default function VendorPortal({
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Reason for shortfall at mandi:</label>
+                <label className="text-xs text-slate-400 block mb-1">Reason for shortfall / stock release:</label>
                 <select
                   value={backoutReason}
                   onChange={(e) => setBackoutReason(e.target.value)}
@@ -348,6 +348,7 @@ export default function VendorPortal({
                   <option value="Mandi rate skyrocketed beyond budget">Mandi rate skyrocketed beyond budget</option>
                   <option value="Supplier vehicle breakdown / delayed">Supplier vehicle breakdown / delayed</option>
                   <option value="Insufficient volume received from farm">Insufficient volume received from farm</option>
+                  <option value="Voluntary allocation release for other suppliers">Voluntary allocation release for other suppliers</option>
                 </select>
               </div>
 

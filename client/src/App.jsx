@@ -185,11 +185,11 @@ export default function App() {
         activeAlloc.vendor_id,
         activeAlloc.vendor_name,
         itemWithAlloc.sku_code,
-        'Mandi batch damaged by heavy night rain, stock unavailable',
+        'Damaged batch / stock shortage reported, releasing allocation',
         activeAlloc.quantity
       );
     } else {
-      showToast('First claim a stock item (e.g. 70kg Potato) to simulate a 5 AM cancellation!', 'warning');
+      showToast('First claim a stock item (e.g. 70kg Potato) to simulate a shortfall release!', 'warning');
     }
   };
 
@@ -221,7 +221,7 @@ export default function App() {
                   {isAdmin ? 'ADMIN CONSOLE' : 'SUPPLIER PORTAL (RESTRICTED)'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Night Indent (12:30 AM) & 5 AM Allocation</p>
+              <p className="text-[11px] text-slate-400">Night Indent (12:30 AM) & Real-Time Procurement Allocation</p>
             </div>
           </div>
 

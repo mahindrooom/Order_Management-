@@ -239,7 +239,7 @@ export default function AdminDashboard({
       {/* VIEW 1: Live Indent View */}
       {activeSubTab === 'indent' && (
         <div className="space-y-6">
-          {/* 5:00 AM Simulation Banner */}
+          {/* Real-Time Shortfall & Release Watchdog Banner */}
           <div className="bg-gradient-to-r from-amber-950/40 via-red-950/20 to-slate-900 border border-amber-800/40 rounded-2xl p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
@@ -247,13 +247,13 @@ export default function AdminDashboard({
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-amber-200 flex items-center gap-2">
-                  <span>5:00 AM Mandi Back-Out Watchdog</span>
+                  <span>Real-Time Shortfall & Demand Release Watchdog</span>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
-                    Automated Safeguard
+                    Automated Immediate Safeguard
                   </span>
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-2xl">
-                  If a supplier cancels or drops stock at 5 AM while you are asleep, the engine immediately returns the stock to the open pool, alerts alternative suppliers, and marks the shortfall for emergency morning action.
+                  Whenever any supplier releases stock, cancels, or reports a shortfall at any time, the engine instantly returns the stock to the open demand pool, alerts Pluckk, and notifies alternative suppliers.
                 </p>
               </div>
             </div>
@@ -263,7 +263,7 @@ export default function AdminDashboard({
               className="shrink-0 flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-amber-600/90 hover:bg-amber-500 text-white rounded-xl transition shadow-sm active:scale-95"
             >
               <AlertTriangle size={14} />
-              <span>Simulate 5 AM Supplier Dropout</span>
+              <span>Simulate Stock Shortfall / Release</span>
             </button>
           </div>
 

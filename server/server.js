@@ -529,7 +529,7 @@ io.on('connection', (socket) => {
 
     if (releasedQty === alloc.quantity) {
       alloc.status = 'BACKED_OUT';
-      alloc.backed_out_reason = reason || 'Unable to supply at 5 AM mandi';
+      alloc.backed_out_reason = reason || 'Unable to supply / stock shortage';
     } else {
       alloc.quantity -= releasedQty;
     }
@@ -542,8 +542,8 @@ io.on('connection', (socket) => {
     const log = {
       id: 'log-' + Date.now(),
       type: 'SHORTFALL_ALERT',
-      title: `🚨 5:00 AM SHORTFALL ALERT: ${item.item_name}`,
-      message: `${vendor_name} reported stock dropout of ${releasedQty} ${item.unit}! (Reason: ${reason || 'Mandi shortage'}). System automatically reopened ${item.remaining_qty} ${item.unit} to all other suppliers.`,
+      title: `🚨 SHORTFALL ALERT: ${item.item_name} (${releasedQty} ${item.unit} Released)`,
+      message: `${vendor_name} reported stock dropout/shortfall of ${releasedQty} ${item.unit}! (Reason: ${reason || 'Supply shortage'}). System immediately reopened ${item.remaining_qty} ${item.unit} to all other suppliers.`,
       timestamp: new Date().toISOString(),
       severity: 'critical',
       sku_code: item.sku_code,
