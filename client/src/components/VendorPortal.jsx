@@ -83,10 +83,22 @@ export default function VendorPortal({
       const perm = await Notification.requestPermission();
       setNotifPermission(perm);
       if (perm === 'granted') {
-        new Notification('🔔 Pluckk Mandi Alerts Enabled', {
-          body: 'You will receive live sound and buzz alerts when new requirements are released!',
-          icon: '/favicon.svg'
-        });
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('🔔 Pluckk Mandi Alerts Enabled', {
+              body: 'You will receive live sound, buzz & requirement update alerts on your phone!',
+              icon: '/favicon.svg',
+              vibrate: [200, 100, 200]
+            });
+          }).catch(() => {
+            try {
+              new Notification('🔔 Pluckk Mandi Alerts Enabled', {
+                body: 'You will receive live sound, buzz & requirement update alerts on your phone!',
+                icon: '/favicon.svg'
+              });
+            } catch (e) {}
+          });
+        }
       }
     }
   };

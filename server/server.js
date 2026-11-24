@@ -27,7 +27,9 @@ const io = new Server(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST']
-  }
+  },
+  pingInterval: 10000,
+  pingTimeout: 5000
 });
 
 app.use(cors());
@@ -611,13 +613,13 @@ io.on('connection', (socket) => {
       id: 'log-' + Date.now(),
       type: isAwarded ? 'BID_AWARDED' : 'BID_OUTBID',
       title: isAwarded 
-        ? `🟢 L1 Allocation: ${item.item_name}` 
+        ? `📢 Requirement Update: ${item.item_name} (${item.remaining_qty} ${item.unit} Left)` 
         : `⚠️ Outbid Notice: ${item.item_name}`,
       message: isAwarded
-        ? `${vendor_name} quoted ₹${rate}/${item.unit} for ${qty} ${item.unit}. Awarded: ${existingBid.allocated_qty} ${item.unit}! (Remaining demand: ${item.remaining_qty} ${item.unit}).`
+        ? `${vendor_name} locked ${existingBid.allocated_qty} ${item.unit}. Remaining open requirement: ${item.remaining_qty} ${item.unit} (Target: ₹${item.target_rate}/${item.unit}).`
         : `${vendor_name} quoted ₹${rate}/${item.unit}. Currently outbid by lower-rate suppliers.`,
       timestamp: new Date().toISOString(),
-      severity: isAwarded ? (isFullNow ? 'success' : 'info') : 'warning',
+      severity: isAwarded ? (isFullNow ? 'success' : 'warning') : 'warning',
       sku_code: item.sku_code
     };
     auditLogs.push(log);
@@ -632,7 +634,8 @@ io.on('connection', (socket) => {
         action: 'BID',
         quoted_rate: rate,
         allocated_qty: existingBid.allocated_qty,
-        allocation_status: existingBid.allocation_status
+        allocation_status: existingBid.allocation_status,
+        remaining_qty: item.remaining_qty
       }
     });
   });

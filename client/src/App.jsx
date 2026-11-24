@@ -178,7 +178,28 @@ function MainApp() {
       setSummary(data.summary);
       if (data.log) {
         setLogs(prev => [...prev.slice(-49), data.log]);
-        showToast(data.log.title, data.log.message, data.log.severity);
+
+        // Tailor the requirement alert dynamically
+        let title = data.log.title;
+        let message = data.log.message;
+
+        if (data.vendor_action) {
+          const action = data.vendor_action;
+          const isMe = currentUser && (
+            currentUser.vendorId === action.vendor_id || 
+            currentUser.name === action.vendor_name
+          );
+
+          if (isMe) {
+            title = `✅ Commitment Locked: ${data.sku.item_name}`;
+            message = `Your quote for ${action.allocated_qty} ${data.sku.unit} is approved @ ₹${action.quoted_rate}/${data.sku.unit}!`;
+          } else {
+            title = `📢 REQUIREMENT UPDATE: ${data.sku.item_name}`;
+            message = `${action.allocated_qty || 'Some'} ${data.sku.unit} just locked by another supplier! ${data.sku.remaining_qty} ${data.sku.unit} remaining. Submit your quote now!`;
+          }
+        }
+
+        showToast(title, message, data.log.severity || 'warning');
       }
     });
 
@@ -218,8 +239,36 @@ function MainApp() {
 
     setSocket(s);
 
+    // Unlock audio on mobile devices upon first touch
+    const unlockAudio = () => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          ctx.resume();
+        }
+      } catch (e) {}
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('click', unlockAudio);
+    };
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('click', unlockAudio, { passive: true });
+
+    // Re-sync immediately when mobile screen unlocks or browser tab regains focus
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && s.connected) {
+        s.emit('get:state');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
     return () => {
       s.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('click', unlockAudio);
     };
   }, []);
 
