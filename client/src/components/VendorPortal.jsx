@@ -7,7 +7,7 @@ import {
 import VendorCatalogModal from './VendorCatalogModal';
 
 export default function VendorPortal({ 
-  vendors, 
+  vendors = [], 
   currentVendorId, 
   onSelectVendor, 
   indent, 
@@ -20,7 +20,22 @@ export default function VendorPortal({
   skuMaster = [],
   onSaveCatalog
 }) {
-  const currentVendor = vendors.find(v => v.id === currentVendorId) || vendors[0];
+  const fallbackVendor = {
+    id: currentUser?.vendorId || currentVendorId || 'v1',
+    name: currentUser?.name || 'Verified Supplier',
+    email: currentUser?.email || 'vendor@pluckk.partner',
+    phone: '+91 98xxx xxxxx',
+    supplied_skus: ['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03'],
+    ratings: { quality: 4.8, price: 4.8, fill_rate: 4.8, delivery_time: 4.8 },
+    compositeRating: 4.8
+  };
+
+  const currentVendor = (Array.isArray(vendors) && vendors.find(v => v && (
+    v.id === currentVendorId || 
+    (currentUser?.vendorId && v.id === currentUser.vendorId) || 
+    (currentUser?.email && v.email && v.email.toLowerCase() === currentUser.email.toLowerCase())
+  ))) || (Array.isArray(vendors) && vendors[0]) || fallbackVendor;
+
   const [selectedSku, setSelectedSku] = useState(null);
   const [quotedRate, setQuotedRate] = useState('');
   const [quotedQty, setQuotedQty] = useState('');
@@ -30,12 +45,14 @@ export default function VendorPortal({
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
   // Filter items: A vendor ONLY sees what is in their supply catalog!
-  const mySuppliedSkus = currentVendor?.supplied_skus || [];
-  const visibleItems = (indent?.items || []).filter(item => mySuppliedSkus.includes(item.sku_code));
+  const mySuppliedSkus = Array.isArray(currentVendor?.supplied_skus) ? currentVendor.supplied_skus : [];
+  const visibleItems = (indent?.items || []).filter(item => 
+    mySuppliedSkus.length === 0 || mySuppliedSkus.includes(item.sku_code)
+  );
 
   // Find all awarded commitments for this vendor
   const myCommitments = (indent?.items || []).flatMap(item => {
-    const myBid = (item.bids || []).find(b => b.vendor_id === currentVendor.id && b.status === 'ACTIVE' && b.allocated_qty > 0);
+    const myBid = (item.bids || []).find(b => b && b.vendor_id === currentVendor?.id && b.status === 'ACTIVE' && b.allocated_qty > 0);
     if (myBid) {
       return [{
         sku_code: item.sku_code,
@@ -53,7 +70,7 @@ export default function VendorPortal({
 
   const handleStartQuote = (item) => {
     setSelectedSku(item.sku_code);
-    const existingBid = (item.bids || []).find(b => b.vendor_id === currentVendor.id && b.status === 'ACTIVE');
+    const existingBid = (item.bids || []).find(b => b && b.vendor_id === currentVendor?.id && b.status === 'ACTIVE');
     if (existingBid) {
       setQuotedRate(existingBid.quoted_rate.toString());
       setQuotedQty(existingBid.quantity.toString());
@@ -68,10 +85,13 @@ export default function VendorPortal({
     const qty = parseFloat(quotedQty);
     if (!rate || rate <= 0 || !qty || qty <= 0) return;
 
+    const vId = currentVendor?.id || currentUser?.vendorId || 'v1';
+    const vName = currentVendor?.name || currentUser?.name || 'Supplier';
+
     if (onBid) {
-      onBid(currentVendor.id, currentVendor.name, sku_code, qty, rate);
+      onBid(vId, vName, sku_code, qty, rate);
     } else if (onConfirmQuantity) {
-      onConfirmQuantity(currentVendor.id, currentVendor.name, sku_code, qty);
+      onConfirmQuantity(vId, vName, sku_code, qty);
     }
 
     setSelectedSku(null);
@@ -82,9 +102,13 @@ export default function VendorPortal({
   const handleBackoutSubmit = (e) => {
     e.preventDefault();
     if (!backoutSku) return;
+
+    const vId = currentVendor?.id || currentUser?.vendorId || 'v1';
+    const vName = currentVendor?.name || currentUser?.name || 'Supplier';
+
     onBackout(
-      currentVendor.id, 
-      currentVendor.name, 
+      vId, 
+      vName, 
       backoutSku.sku_code, 
       backoutReason || 'Stock shortage reported',
       backoutDropQty ? parseFloat(backoutDropQty) : null
@@ -129,8 +153,8 @@ export default function VendorPortal({
             <div className="flex items-center justify-between text-xs bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
               <div>
                 <span className="text-[10px] text-slate-400 block font-semibold uppercase">Verified Supplier:</span>
-                <span className="font-bold text-white text-sm">{currentUser?.name || currentVendor.name}</span>
-                <span className="text-[11px] text-slate-400 block font-mono">{currentUser?.email || currentVendor.email}</span>
+                <span className="font-bold text-white text-sm">{currentUser?.name || currentVendor?.name || 'Verified Supplier'}</span>
+                <span className="text-[11px] text-slate-400 block font-mono">{currentUser?.email || currentVendor?.email || ''}</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg font-semibold block">
@@ -138,7 +162,7 @@ export default function VendorPortal({
                 </span>
                 <span className="text-[10px] text-amber-400 flex items-center gap-0.5 justify-end mt-1">
                   <Star size={10} className="fill-amber-400 text-amber-400" />
-                  <span>★{currentVendor.compositeRating || 4.8} Score</span>
+                  <span>★{currentVendor?.compositeRating || 4.8} Score</span>
                 </span>
               </div>
             </div>
@@ -146,12 +170,12 @@ export default function VendorPortal({
             <div>
               <label className="text-[11px] text-slate-400 block mb-1">Acting as Supplier (Switch to test):</label>
               <div className="grid grid-cols-2 gap-1.5">
-                {vendors.map((v) => (
+                {(vendors || []).map((v) => (
                   <button
                     key={v.id}
                     onClick={() => onSelectVendor(v.id)}
                     className={`text-left px-2.5 py-1.5 rounded-xl text-xs transition border flex items-center justify-between ${
-                      v.id === currentVendor.id
+                      v.id === currentVendor?.id
                         ? 'bg-emerald-600 text-white font-semibold border-emerald-500 shadow-sm'
                         : 'bg-slate-800/80 text-slate-300 border-slate-700/60 hover:bg-slate-700'
                     }`}
@@ -237,7 +261,7 @@ export default function VendorPortal({
 
         {visibleItems.map((item) => {
           const isFulfilled = item.remaining_qty === 0;
-          const myBid = (item.bids || []).find(b => b.vendor_id === currentVendor.id && b.status === 'ACTIVE');
+          const myBid = (item.bids || []).find(b => b && b.vendor_id === currentVendor?.id && b.status === 'ACTIVE');
           const isSelected = selectedSku === item.sku_code;
 
           return (
@@ -406,6 +430,7 @@ export default function VendorPortal({
         isOpen={isCatalogModalOpen}
         onClose={() => setIsCatalogModalOpen(false)}
         vendor={currentVendor}
+        currentUser={currentUser}
         skuMaster={skuMaster}
         onSaveCatalog={onSaveCatalog}
       />

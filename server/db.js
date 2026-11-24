@@ -87,6 +87,132 @@ const initialVendors = [
   }
 ];
 
+// MongoDB Mongoose Schemas & Status Tracking
+let isMongoConnected = false;
+let mongoError = null;
+const MONGODB_URI = process.env.MONGODB_URI;
+
+const SkuSchema = new mongoose.Schema({
+  sku_code: { type: String, required: true, unique: true },
+  item_name: String,
+  category: String,
+  unit: String,
+  benchmark_rate: Number,
+  mandi_spec: String,
+  active: { type: Boolean, default: true }
+});
+
+const VendorSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: String,
+  email: String,
+  phone: String,
+  supplied_skus: [String],
+  ratings: {
+    quality: { type: Number, default: 4.8 },
+    price: { type: Number, default: 4.8 },
+    fill_rate: { type: Number, default: 4.8 },
+    delivery_time: { type: Number, default: 4.8 }
+  }
+});
+
+const UserSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  name: String,
+  role: String,
+  isAdmin: Boolean,
+  isSourcing: Boolean,
+  vendorId: String,
+  created_at: String
+});
+
+const SkuModel = mongoose.models.SkuMaster || mongoose.model('SkuMaster', SkuSchema);
+const VendorModel = mongoose.models.Vendor || mongoose.model('Vendor', VendorSchema);
+const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
+
+async function initMongo() {
+  if (!MONGODB_URI) {
+    console.log('[DB] No MONGODB_URI configured. Running with local persistent JSON store.');
+    return;
+  }
+  try {
+    console.log('[DB] Connecting to MongoDB Atlas...');
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000
+    });
+    isMongoConnected = true;
+    console.log('[DB] Successfully connected to MongoDB Atlas!');
+
+    // Seed collections if empty
+    const skuCount = await SkuModel.countDocuments();
+    if (skuCount === 0) {
+      console.log('[DB] Seeding MongoDB with initial SKU Master Catalog...');
+      await SkuModel.insertMany(initialSkuMaster);
+    }
+    const vendorCount = await VendorModel.countDocuments();
+    if (vendorCount === 0) {
+      console.log('[DB] Seeding MongoDB with initial Vendors...');
+      await VendorModel.insertMany(initialVendors);
+    }
+    const userCount = await UserModel.countDocuments();
+    if (userCount === 0) {
+      console.log('[DB] Seeding MongoDB with default Users...');
+      await UserModel.insertMany(defaultDb.users);
+    }
+
+    // Sync memory store from MongoDB
+    const mongoSkus = await SkuModel.find({}).lean();
+    const mongoVendors = await VendorModel.find({}).lean();
+    const mongoUsers = await UserModel.find({}).lean();
+
+    const current = readDb();
+    if (mongoSkus.length) current.skuMaster = mongoSkus;
+    if (mongoVendors.length) current.vendors = mongoVendors;
+    if (mongoUsers.length) current.users = mongoUsers;
+    writeDb(current);
+  } catch (err) {
+    mongoError = err.message;
+    console.error('[DB] MongoDB Atlas connection error:', err.message);
+    console.log('[DB] Running with local JSON store as fallback.');
+  }
+}
+
+// Background async sync to MongoDB
+function syncMongo(data) {
+  if (!isMongoConnected) return;
+  Promise.resolve().then(async () => {
+    try {
+      if (data.vendors && data.vendors.length) {
+        for (const v of data.vendors) {
+          await VendorModel.findOneAndUpdate({ id: v.id }, v, { upsert: true });
+        }
+      }
+      if (data.skuMaster && data.skuMaster.length) {
+        for (const s of data.skuMaster) {
+          await SkuModel.findOneAndUpdate({ sku_code: s.sku_code }, s, { upsert: true });
+        }
+      }
+      if (data.users && data.users.length) {
+        for (const u of data.users) {
+          await UserModel.findOneAndUpdate({ id: u.id }, u, { upsert: true });
+        }
+      }
+    } catch (err) {
+      console.error('[DB] Async MongoDB sync error:', err.message);
+    }
+  });
+}
+
+function getDbStatus() {
+  return {
+    connected: isMongoConnected,
+    type: isMongoConnected ? 'MongoDB Atlas' : 'Local File Store',
+    uri_configured: Boolean(MONGODB_URI),
+    error: mongoError
+  };
+}
+
 function getCompositeRating(ratings) {
   if (!ratings) return 4.0;
   const q = parseFloat(ratings.quality || 4.0);
@@ -192,6 +318,7 @@ function readDb() {
 function writeDb(data) {
   try {
     fs.writeFileSync(dbFilePath, JSON.stringify(data, null, 2), 'utf8');
+    syncMongo(data);
   } catch (err) {
     console.error('Error writing db.json:', err);
   }
@@ -360,6 +487,8 @@ if (!fs.existsSync(dbFilePath)) {
 module.exports = {
   readDb,
   writeDb,
+  initMongo,
+  getDbStatus,
   ADMIN_EMAILS,
   evaluateRole,
   initialSkuMaster,

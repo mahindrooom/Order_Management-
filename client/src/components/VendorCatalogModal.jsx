@@ -5,6 +5,7 @@ export default function VendorCatalogModal({
   isOpen, 
   onClose, 
   vendor, 
+  currentUser,
   skuMaster = [], 
   onSaveCatalog 
 }) {
@@ -14,14 +15,14 @@ export default function VendorCatalogModal({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (vendor && vendor.supplied_skus) {
+    if (vendor && Array.isArray(vendor.supplied_skus)) {
       setSelectedSkus([...vendor.supplied_skus]);
     } else {
-      setSelectedSkus([]);
+      setSelectedSkus(['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03']);
     }
   }, [vendor, isOpen]);
 
-  if (!isOpen || !vendor) return null;
+  if (!isOpen) return null;
 
   const toggleSku = (skuCode) => {
     if (selectedSkus.includes(skuCode)) {
@@ -50,7 +51,10 @@ export default function VendorCatalogModal({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSaveCatalog(vendor.id, selectedSkus);
+      const vId = vendor?.id || currentUser?.vendorId || ('v-' + Date.now().toString().slice(-4));
+      const vEmail = vendor?.email || currentUser?.email || '';
+      const vName = vendor?.name || currentUser?.name || 'Supplier';
+      await onSaveCatalog(vId, selectedSkus, vEmail, vName);
       onClose();
     } catch (err) {
       console.error(err);

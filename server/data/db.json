@@ -2,6 +2,15 @@
   "users": [
     {
       "id": "usr-admin-1",
+      "email": "om.mahindroo@pluckk.co.in",
+      "name": "Om Mahindroo",
+      "role": "ADMIN",
+      "isAdmin": true,
+      "isSourcing": true,
+      "created_at": "2026-11-24T15:05:04.938Z"
+    },
+    {
+      "id": "usr-admin-1",
       "email": "procurement@pluckk.in",
       "name": "Pluckk Procurement Lead",
       "role": "ADMIN",
@@ -60,6 +69,187 @@
       "isAdmin": false,
       "vendorId": "v-6916",
       "created_at": "2026-11-24T10:41:56.916Z"
+    }
+  ],
+  "skuMaster": [
+    {
+      "sku_code": "PLK-VEG-POT-01",
+      "item_name": "Potato Agra Fresh (ज्योति आलू)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 22.5,
+      "mandi_spec": "Grade A, 45mm+ size, dry skin",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-ONI-02",
+      "item_name": "Onion Nashik Red (लाल प्याज)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 28,
+      "mandi_spec": "Nashik origin, double patti, dry",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-TOM-03",
+      "item_name": "Tomato Hybrid Grade-A (टमाटर)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 24,
+      "mandi_spec": "Semi-ripe firm, red, 80-100g",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-CAP-04",
+      "item_name": "Capsicum Green Shimla (हरी शिमला मिर्च)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 45,
+      "mandi_spec": "Dark green, 3-4 lobes, unblemished",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-BHI-05",
+      "item_name": "Bhindi / Okra Tender (भिंडी)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 38,
+      "mandi_spec": "Tender 3-4 inch, snaps easily, no fibers",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-PAL-06",
+      "item_name": "Palak Hydro / Desi Leafy (पालक)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 26,
+      "mandi_spec": "Fresh green leaves, no yellowing, bunched",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-CAU-07",
+      "item_name": "Cauliflower Medium (फूलगोभी)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 32,
+      "mandi_spec": "Compact white curd, green jacket leaves",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-FRU-BAN-08",
+      "item_name": "Robusta Banana Semi-Ripe (केला)",
+      "category": "Fruits",
+      "unit": "kg",
+      "benchmark_rate": 30,
+      "mandi_spec": "Cavendish / Robusta, color stage 3.5 to 4",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-FRU-POM-09",
+      "item_name": "Pomegranate Bhagwa Fresh (अनार)",
+      "category": "Fruits",
+      "unit": "kg",
+      "benchmark_rate": 110,
+      "mandi_spec": "Bhagwa export grade, ruby red arils",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-COR-10",
+      "item_name": "Coriander Fresh Leaves (धनिया पत्ती)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 40,
+      "mandi_spec": "Fresh roots intact, aroma rich, green",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-GIN-11",
+      "item_name": "Ginger Old Mature (अदरक)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 75,
+      "mandi_spec": "Washed, low fiber, firm rhizomes",
+      "active": true
+    },
+    {
+      "sku_code": "PLK-VEG-GAR-12",
+      "item_name": "Garlic Desi Regular (लहसुन)",
+      "category": "Vegetables",
+      "unit": "kg",
+      "benchmark_rate": 140,
+      "mandi_spec": "M.P. origin, dry cloves, tight skin",
+      "active": true
+    }
+  ],
+  "vendors": [
+    {
+      "id": "v1",
+      "name": "Ramesh Mandi Traders",
+      "email": "ramesh.traders@gmail.com",
+      "phone": "+91 98201 11223",
+      "supplied_skus": [
+        "PLK-VEG-POT-01",
+        "PLK-VEG-ONI-02",
+        "PLK-VEG-TOM-03"
+      ],
+      "ratings": {
+        "quality": 4.8,
+        "price": 4.9,
+        "fill_rate": 4.9,
+        "delivery_time": 4.8
+      }
+    },
+    {
+      "id": "v2",
+      "name": "Suresh Greenfield Agro",
+      "email": "suresh.agro@yahoo.com",
+      "phone": "+91 98202 22334",
+      "supplied_skus": [
+        "PLK-VEG-POT-01",
+        "PLK-VEG-PAL-06",
+        "PLK-VEG-CAP-04",
+        "PLK-VEG-TOM-03"
+      ],
+      "ratings": {
+        "quality": 4.9,
+        "price": 4.5,
+        "fill_rate": 4.8,
+        "delivery_time": 4.9
+      }
+    },
+    {
+      "id": "v3",
+      "name": "APMC Patil & Sons",
+      "email": "patil.apmc@rediffmail.com",
+      "phone": "+91 98203 33445",
+      "supplied_skus": [
+        "PLK-VEG-POT-01",
+        "PLK-VEG-ONI-02",
+        "PLK-VEG-BHI-05",
+        "PLK-VEG-CAU-07"
+      ],
+      "ratings": {
+        "quality": 4.6,
+        "price": 4.7,
+        "fill_rate": 4.6,
+        "delivery_time": 4.6
+      }
+    },
+    {
+      "id": "v4",
+      "name": "Kisan Fresh Fruits Hub",
+      "email": "kisan.fruits@outlook.com",
+      "phone": "+91 98204 44556",
+      "supplied_skus": [
+        "PLK-FRU-BAN-08",
+        "PLK-FRU-POM-09"
+      ],
+      "ratings": {
+        "quality": 4.8,
+        "price": 4.6,
+        "fill_rate": 4.7,
+        "delivery_time": 4.8
+      }
     }
   ]
 }

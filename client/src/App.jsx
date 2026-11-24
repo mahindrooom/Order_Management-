@@ -9,12 +9,56 @@ import LoginPage from './components/LoginPage';
 import { 
   Building2, Smartphone, SplitSquareVertical, Bell, 
   Wifi, WifiOff, AlertTriangle, CheckCircle2, ShieldAlert,
-  Layers, RefreshCw, LogOut, ShieldCheck, User, Award, ShoppingCart
+  Layers, RefreshCw, LogOut, ShieldCheck, User, Award, ShoppingCart, Database
 } from 'lucide-react';
 
 const SOCKET_URL = undefined;
 
-export default function App() {
+// Robust React ErrorBoundary to prevent blank screens
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('Unhandled UI exception in ErrorBoundary:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl font-bold border border-amber-500/30">
+            ⚠️
+          </div>
+          <h2 className="text-xl font-bold">Session State Restored</h2>
+          <p className="text-xs text-slate-400 max-w-md">
+            {this.state.error?.message || 'A temporary display state mismatch was caught.'}
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
+            >
+              Resume Portal
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MainApp() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('pluckk_user');
@@ -26,6 +70,7 @@ export default function App() {
 
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [dbStatus, setDbStatus] = useState({ connected: false, type: 'Local JSON Store' });
   const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'admin', 'vendor'
   const [currentVendorId, setCurrentVendorId] = useState('v1');
   
@@ -59,8 +104,22 @@ export default function App() {
     }
   };
 
+  // Load DB Status
+  const fetchDbStatus = async () => {
+    try {
+      const res = await fetch('/api/db-status');
+      if (res.ok) {
+        const data = await res.json();
+        setDbStatus(data);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     fetchSkuMaster();
+    fetchDbStatus();
   }, []);
 
   // Lock active tab based on role
@@ -124,9 +183,16 @@ export default function App() {
     });
 
     s.on('vendor:catalog_updated', (data) => {
-      setVendors(prev => prev.map(v => 
-        v.id === data.vendor_id ? { ...v, supplied_skus: data.supplied_skus } : v
-      ));
+      setVendors(prev => {
+        const list = Array.isArray(prev) ? prev : [];
+        const exists = list.some(v => v && v.id === data.vendor_id);
+        if (exists) {
+          return list.map(v => v.id === data.vendor_id ? (data.vendor || { ...v, supplied_skus: data.supplied_skus }) : v);
+        } else if (data.vendor) {
+          return [...list, data.vendor];
+        }
+        return list;
+      });
       showToast(`${data.vendor_name}'s catalogue updated (${data.supplied_skus.length} articles)`, 'info');
     });
 
@@ -186,20 +252,39 @@ export default function App() {
   };
 
   // Save Vendor Supply Catalog
-  const handleSaveCatalog = async (vendor_id, supplied_skus) => {
+  const handleSaveCatalog = async (vendor_id, supplied_skus, email, name) => {
     try {
       const res = await fetch(`/api/vendors/${vendor_id}/catalog`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supplied_skus })
+        body: JSON.stringify({ 
+          supplied_skus,
+          email: email || currentUser?.email,
+          name: name || currentUser?.name
+        })
       });
       const data = await res.json();
-      if (res.ok) {
-        setVendors(prev => prev.map(v => v.id === vendor_id ? data.vendor : v));
-        showToast('Supply catalogue saved successfully!', 'success');
+      if (res.ok && data.vendor) {
+        setVendors(prev => {
+          const list = Array.isArray(prev) ? prev : [];
+          const exists = list.some(v => v && v.id === data.vendor.id);
+          if (exists) {
+            return list.map(v => v.id === data.vendor.id ? data.vendor : v);
+          } else {
+            return [...list, data.vendor];
+          }
+        });
+        if (currentUser && currentUser.role === 'VENDOR') {
+          const updatedUser = { ...currentUser, vendorId: data.vendor.id };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('pluckk_user', JSON.stringify(updatedUser));
+          setCurrentVendorId(data.vendor.id);
+        }
+        showToast(`Supply catalogue saved! (${supplied_skus.length} articles active)`, 'success');
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error saving catalogue:', e);
+      showToast('Error saving catalogue. Check network connection.', 'critical');
     }
   };
 
@@ -336,8 +421,26 @@ export default function App() {
             </div>
           )}
 
-          {/* Right Action Section: User Info & Logout */}
+          {/* Right Action Section: User Info, DB Status & Logout */}
           <div className="flex items-center gap-3">
+            {dbStatus.connected ? (
+              <div 
+                className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30"
+                title="Active Connection: MongoDB Atlas Cloud Database"
+              >
+                <Database size={12} className="text-emerald-400" />
+                <span>MongoDB Atlas</span>
+              </div>
+            ) : (
+              <div 
+                className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-400 font-medium bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-700/60"
+                title="Running with persistent store"
+              >
+                <Database size={12} className="text-slate-400" />
+                <span>Persistent DB</span>
+              </div>
+            )}
+
             {connected ? (
               <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -465,5 +568,13 @@ export default function App() {
         }}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }

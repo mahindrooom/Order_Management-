@@ -9,6 +9,8 @@ const csv = require('csv-parser');
 const { 
   readDb, 
   writeDb, 
+  initMongo,
+  getDbStatus,
   evaluateRole, 
   matchAndEnrichItems, 
   recalculateL1Allocations,
@@ -18,6 +20,9 @@ const {
 
 const app = express();
 const server = http.createServer(app);
+
+// Initialize DB (Connects to MongoDB Atlas if MONGODB_URI is provided, otherwise falls back to local JSON store)
+initMongo().catch(err => console.error('[DB] Mongo init error:', err));
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -233,6 +238,10 @@ app.get('/api/auth/verify', (req, res) => {
 });
 
 // ================= VENDOR & CATALOG APIS =================
+app.get('/api/db-status', (req, res) => {
+  res.json(getDbStatus());
+});
+
 app.get('/api/vendors', (req, res) => {
   const vendors = getVendors().map(v => ({
     ...v,
@@ -244,28 +253,53 @@ app.get('/api/vendors', (req, res) => {
 // Update a vendor's supply catalogue (What they supply)
 app.post('/api/vendors/:id/catalog', (req, res) => {
   const vendorId = req.params.id;
-  const { supplied_skus } = req.body;
+  const { supplied_skus, email, name } = req.body;
 
   if (!Array.isArray(supplied_skus)) {
     return res.status(400).json({ error: 'supplied_skus must be an array of SKU codes' });
   }
 
   const db = readDb();
-  const vendor = (db.vendors || []).find(v => v.id === vendorId);
+  if (!db.vendors) db.vendors = [];
+
+  let vendor = db.vendors.find(v => 
+    v.id === vendorId || 
+    (email && v.email && v.email.toLowerCase() === email.toLowerCase())
+  );
+
   if (!vendor) {
-    return res.status(404).json({ error: 'Vendor not found' });
+    const effectiveId = (vendorId && vendorId !== 'null' && vendorId !== 'undefined') 
+      ? vendorId 
+      : ('v-' + Date.now().toString().slice(-4));
+
+    vendor = {
+      id: effectiveId,
+      name: name || 'Supplier',
+      email: email || '',
+      phone: '+91 98xxx xxxxx',
+      supplied_skus: supplied_skus,
+      ratings: { quality: 4.8, price: 4.8, fill_rate: 4.8, delivery_time: 4.8 }
+    };
+    db.vendors.push(vendor);
+  } else {
+    vendor.supplied_skus = supplied_skus;
   }
 
-  vendor.supplied_skus = supplied_skus;
   writeDb(db);
+
+  const enrichedVendor = {
+    ...vendor,
+    compositeRating: getCompositeRating(vendor.ratings)
+  };
 
   io.emit('vendor:catalog_updated', {
     vendor_id: vendor.id,
     vendor_name: vendor.name,
-    supplied_skus: vendor.supplied_skus
+    supplied_skus: vendor.supplied_skus,
+    vendor: enrichedVendor
   });
 
-  res.json({ success: true, vendor });
+  res.json({ success: true, vendor: enrichedVendor });
 });
 
 // Update a vendor's 4 rating pillars (Admin only)
