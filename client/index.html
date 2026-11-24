@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background-color: #020617;">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -20,15 +20,27 @@
     <!-- Android & Windows Standalone Mode -->
     <meta name="mobile-web-app-capable" content="yes" />
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-white">
+  <body style="background-color: #020617; color: #f8fafc; min-height: 100vh;" class="bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // Register PWA Service Worker
+      // Clean up stale caches and register fresh Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.log('SW registration failed: ', err);
+          // Clear any broken legacy caches from previous versions
+          if ('caches' in window) {
+            caches.keys().then((names) => {
+              for (let name of names) {
+                if (name.includes('pluckk-vendor-cache')) {
+                  caches.delete(name);
+                }
+              }
+            });
+          }
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            reg.update();
+          }).catch((err) => {
+            console.log('SW registration note: ', err);
           });
         });
       }

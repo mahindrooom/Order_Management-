@@ -1,57 +1,33 @@
-// Pluckk PWA Service Worker for Mobile Notifications & Offline Shell
-const CACHE_NAME = 'pluckk-vendor-cache-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg'
-];
+// Pluckk Mobile PWA Service Worker (Push Notifications & Live Background Alerts)
+const SW_VERSION = 'pluckk-sw-v2';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
+      return Promise.all(keys.map((key) => caches.delete(key)));
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// Always pass network requests directly to server so Vite dynamic chunks never break
 self.addEventListener('fetch', (event) => {
-  // Let API and WebSocket calls pass through directly
-  if (event.request.url.includes('/api/') || event.request.url.includes('/socket.io/')) {
-    return;
-  }
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
+  // Do not intercept or block any network requests
+  return;
 });
 
-// Native Push Notifications receiver
+// Native Push Notifications receiver for background mobile alerts
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || '🚨 Pluckk Mandi Alert';
+  const title = data.title || '📢 Pluckk Mandi Requirement Update';
   const options = {
-    body: data.message || 'New requirements or shortfall released in your catalogue!',
+    body: data.message || 'Requirements have been updated in your supply catalogue. Tap to view!',
     icon: '/favicon.svg',
     badge: '/favicon.svg',
-    vibrate: [200, 100, 200],
+    vibrate: [250, 100, 250],
     data: { url: '/' }
   };
   event.waitUntil(self.registration.showNotification(title, options));
@@ -60,6 +36,15 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data.url || '/')
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(event.notification.data.url || '/');
+      }
+    })
   );
 });
