@@ -6,7 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-const { readDb, writeDb } = require('./db');
+const { readDb, writeDb, matchAndEnrichItems } = require('./db');
 
 const app = express();
 const server = http.createServer(app);
@@ -50,12 +50,14 @@ const defaultSampleItems = [
 ];
 
 function createIndentFromItems(items, sourceTitle = 'Nightly Indent (12:30 AM)') {
+  const { enriched, unmatched } = matchAndEnrichItems(items);
   return {
     id: 'IND-' + Date.now().toString().slice(-6),
     title: sourceTitle,
     generated_at: new Date().toISOString(),
     status: 'ACTIVE',
-    items: items.map(item => ({
+    unmatched_count: unmatched.length,
+    items: enriched.map(item => ({
       sku_code: item.sku_code,
       item_name: item.item_name,
       category: item.category || 'General',
@@ -65,6 +67,9 @@ function createIndentFromItems(items, sourceTitle = 'Nightly Indent (12:30 AM)')
       allocated_qty: 0,
       remaining_qty: parseFloat(item.required_qty),
       status: 'OPEN', // 'OPEN', 'PARTIALLY_FULFILLED', 'FULFILLED'
+      matched: item.matched !== false,
+      mandi_spec: item.mandi_spec || null,
+      warning: item.warning || null,
       allocations: [] // [{ id, vendor_id, vendor_name, quantity, timestamp, status: 'CONFIRMED'|'BACKED_OUT' }]
     }))
   };
@@ -256,6 +261,42 @@ app.get('/api/state', (req, res) => {
 
 app.get('/api/vendors', (req, res) => {
   res.json(vendorsList);
+});
+
+// ================= SKU MASTER APIS =================
+app.get('/api/sku-master', (req, res) => {
+  const db = readDb();
+  res.json(db.skuMaster || []);
+});
+
+app.post('/api/sku-master', (req, res) => {
+  const { sku_code, item_name, category, unit, benchmark_rate, mandi_spec } = req.body;
+  if (!sku_code || !item_name) {
+    return res.status(400).json({ error: 'sku_code and item_name are required' });
+  }
+
+  const db = readDb();
+  if (!db.skuMaster) db.skuMaster = [];
+
+  const existingIdx = db.skuMaster.findIndex(s => s.sku_code.toUpperCase() === sku_code.trim().toUpperCase());
+  const entry = {
+    sku_code: sku_code.trim().toUpperCase(),
+    item_name: item_name.trim(),
+    category: category || 'Vegetables',
+    unit: unit || 'kg',
+    benchmark_rate: parseFloat(benchmark_rate || 0),
+    mandi_spec: mandi_spec || '',
+    active: true
+  };
+
+  if (existingIdx >= 0) {
+    db.skuMaster[existingIdx] = entry;
+  } else {
+    db.skuMaster.push(entry);
+  }
+
+  writeDb(db);
+  res.json({ success: true, item: entry, total: db.skuMaster.length });
 });
 
 // Reset or load default indent
