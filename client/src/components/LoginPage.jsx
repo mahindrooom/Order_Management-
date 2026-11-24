@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, UserCheck, ArrowRight, Sparkles, Building2, Smartphone, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, UserCheck, ArrowRight, Sparkles, Building2, Smartphone, AlertCircle, ShoppingCart, Award } from 'lucide-react';
 
 export default function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -8,7 +8,9 @@ export default function LoginPage({ onLoginSuccess }) {
   const [error, setError] = useState('');
 
   const trimmedEmail = email.trim().toLowerCase();
-  const isAdmin = trimmedEmail.endsWith('@pluckk.in') || trimmedEmail.endsWith('@pluckk.co.in');
+  const isAdmin = trimmedEmail === 'om.mahindroo@pluckk.co.in' || trimmedEmail === 'admin@pluckk.co.in';
+  const isSourcing = (trimmedEmail.endsWith('@pluckk.in') || trimmedEmail.endsWith('@pluckk.co.in')) && !isAdmin;
+  const isVendor = !trimmedEmail.endsWith('@pluckk.in') && !trimmedEmail.endsWith('@pluckk.co.in');
   const hasEmail = trimmedEmail.length > 0 && trimmedEmail.includes('@');
 
   const handleSubmit = async (e) => {
@@ -63,7 +65,7 @@ export default function LoginPage({ onLoginSuccess }) {
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">Pluckk Procurement Portal</h1>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Nightly Indent (12:30 AM) & 5:00 AM Mandi Real-Time Allocation Engine
+            Nightly Indent (12:30 AM), L1 Bidding & Catalogue Allocation Engine
           </p>
         </div>
 
@@ -73,7 +75,7 @@ export default function LoginPage({ onLoginSuccess }) {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Sign In to Continue</span>
             <div className="flex items-center gap-1 text-[11px] text-slate-500">
               <Lock size={12} />
-              <span>Role-Based Access</span>
+              <span>3-Tier Access</span>
             </div>
           </div>
 
@@ -105,7 +107,7 @@ export default function LoginPage({ onLoginSuccess }) {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Ramesh Traders or Amit Sharma"
+                placeholder="e.g. Om Mahindroo or Ramesh Mandi"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
@@ -114,21 +116,29 @@ export default function LoginPage({ onLoginSuccess }) {
 
             {/* Dynamic Role Access Indicator */}
             {hasEmail && (
-              <div className={`p-3 rounded-2xl border text-xs transition-all duration-200 ${
+              <div className={`p-3.5 rounded-2xl border text-xs transition-all duration-200 ${
                 isAdmin 
-                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                  ? 'bg-purple-950/40 border-purple-500/40 text-purple-300' 
+                  : isSourcing
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                   : 'bg-blue-950/40 border-blue-500/40 text-blue-300'
               }`}>
                 <div className="flex items-center gap-2 font-bold mb-0.5">
-                  {isAdmin ? <Building2 size={16} /> : <Smartphone size={16} />}
+                  {isAdmin ? <Award size={16} /> : isSourcing ? <ShoppingCart size={16} /> : <Smartphone size={16} />}
                   <span>
-                    {isAdmin ? '🛡️ Pluckk Official (Admin Access Granted)' : '🚚 Supplier Portal (Restricted Access)'}
+                    {isAdmin 
+                      ? '👑 Executive Admin (Full System Control)' 
+                      : isSourcing 
+                      ? '🛒 Sourcing Ops (Upload Indents & L1 Bidding)' 
+                      : '🚚 Supplier Portal (Catalogue-Filtered 1-to-1)'}
                   </span>
                 </div>
                 <p className="text-[11px] opacity-90 leading-relaxed">
                   {isAdmin 
-                    ? 'Granted full admin rights: Upload indents, monitor all suppliers, broadcast SOS, export POs.' 
-                    : 'Granted 1-to-1 supplier rights: View available items, claim quantities, report 5 AM shortages.'}
+                    ? 'Granted master rights: SKU master catalog, 4-pillar vendor rating configurations, full sourcing controls & overrides.' 
+                    : isSourcing
+                    ? 'Granted sourcing rights: Upload 12:30 AM indents, review quotes, least-cost L1 awards, manage supplier catalogues, export POs.'
+                    : 'Granted supplier rights: Clean view of articles in your supply catalogue, submit competitive quotes, report shortfalls anytime.'}
                 </p>
               </div>
             )}
@@ -142,7 +152,7 @@ export default function LoginPage({ onLoginSuccess }) {
                 <span>Verifying Access...</span>
               ) : (
                 <>
-                  <span>Sign In as {isAdmin ? 'Pluckk Admin' : 'Supplier'}</span>
+                  <span>Sign In as {isAdmin ? 'Pluckk Admin' : isSourcing ? 'Sourcing Lead' : 'Supplier'}</span>
                   <ArrowRight size={16} />
                 </>
               )}
@@ -154,66 +164,69 @@ export default function LoginPage({ onLoginSuccess }) {
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
               <span className="flex items-center gap-1">
                 <Sparkles size={12} className="text-amber-400" />
-                <span>1-Click Test Accounts:</span>
+                <span>3-Tier Access Accounts:</span>
               </span>
               <span className="text-slate-500 text-[10px]">Tap to test</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="space-y-2 text-xs">
+              {/* ADMIN */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('procurement@pluckk.in', 'Pluckk Procurement Lead')}
-                className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-left transition"
+                onClick={() => handleQuickLogin('om.mahindroo@pluckk.co.in', 'Om Mahindroo')}
+                className="w-full p-2.5 rounded-xl bg-purple-950/30 hover:bg-purple-950/50 border border-purple-500/30 text-left transition flex items-center justify-between"
               >
-                <div className="font-bold text-emerald-400 flex items-center gap-1">
-                  <span>@pluckk.in</span>
-                  <span className="text-[9px] bg-emerald-500/20 px-1 rounded">Admin</span>
+                <div>
+                  <div className="font-bold text-purple-300 flex items-center gap-1.5">
+                    <span>👑 Admin: om.mahindroo@pluckk.co.in</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">Full admin rights, SKU master, vendor 4-pillar ratings</div>
                 </div>
-                <div className="text-[11px] text-slate-300 truncate mt-0.5">procurement@pluckk.in</div>
+                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">ADMIN</span>
               </button>
 
+              {/* SOURCING */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('ops@pluckk.co.in', 'Pluckk Operations')}
-                className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-left transition"
+                onClick={() => handleQuickLogin('procurement@pluckk.in', 'Pluckk Sourcing Lead')}
+                className="w-full p-2.5 rounded-xl bg-emerald-950/30 hover:bg-emerald-950/50 border border-emerald-500/30 text-left transition flex items-center justify-between"
               >
-                <div className="font-bold text-emerald-400 flex items-center gap-1">
-                  <span>@pluckk.co.in</span>
-                  <span className="text-[9px] bg-emerald-500/20 px-1 rounded">Admin</span>
+                <div>
+                  <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                    <span>🛒 Sourcing: procurement@pluckk.in</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">Upload indents, review quotes, least-cost L1 awards, POs</div>
                 </div>
-                <div className="text-[11px] text-slate-300 truncate mt-0.5">ops@pluckk.co.in</div>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">SOURCING</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ramesh.traders@gmail.com', 'Ramesh Mandi Traders')}
-                className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-left transition"
-              >
-                <div className="font-bold text-blue-400 flex items-center gap-1">
-                  <span>Ramesh (Potato/Onion)</span>
-                  <span className="text-[9px] bg-blue-500/20 px-1 rounded">Vendor</span>
-                </div>
-                <div className="text-[11px] text-slate-400 truncate mt-0.5">ramesh.traders@gmail.com</div>
-              </button>
+              {/* VENDORS */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('ramesh.traders@gmail.com', 'Ramesh Mandi Traders')}
+                  className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-left transition"
+                >
+                  <div className="font-bold text-blue-400">Ramesh Traders</div>
+                  <div className="text-[10px] text-slate-400 truncate">Potato, Onion, Tomato</div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('suresh.agro@yahoo.com', 'Suresh Greenfield Agro')}
-                className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-left transition"
-              >
-                <div className="font-bold text-purple-400 flex items-center gap-1">
-                  <span>Suresh (Leafy/Veg)</span>
-                  <span className="text-[9px] bg-purple-500/20 px-1 rounded">Vendor</span>
-                </div>
-                <div className="text-[11px] text-slate-400 truncate mt-0.5">suresh.agro@yahoo.com</div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('kisan.fruits@outlook.com', 'Kisan Fruits Hub')}
+                  className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-left transition"
+                >
+                  <div className="font-bold text-amber-400">Kisan Fruits</div>
+                  <div className="text-[10px] text-slate-400 truncate">Fruits only (Banana, Pomegranate)</div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer info */}
         <div className="text-center text-[11px] text-slate-500">
-          Emails ending in <strong>@pluckk.in</strong> or <strong>@pluckk.co.in</strong> receive Admin Access. All other emails receive Restricted Supplier Access.
+          Admin: <strong>om.mahindroo@pluckk.co.in</strong> • Sourcing: <strong>*@pluckk.in / *@pluckk.co.in</strong> • Suppliers: <strong>External Emails</strong>
         </div>
       </div>
     </div>

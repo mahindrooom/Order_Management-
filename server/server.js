@@ -6,7 +6,15 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-const { readDb, writeDb, matchAndEnrichItems } = require('./db');
+const { 
+  readDb, 
+  writeDb, 
+  evaluateRole, 
+  matchAndEnrichItems, 
+  recalculateL1Allocations,
+  getCompositeRating,
+  ADMIN_EMAILS
+} = require('./db');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,15 +35,13 @@ if (!fs.existsSync(uploadDir)) {
 }
 const upload = multer({ dest: uploadDir });
 
-// Initial Pre-configured Vendors
-let vendorsList = [
-  { id: 'v1', name: 'Ramesh Mandi Traders', email: 'ramesh.traders@gmail.com', phone: '+91 98201 11223', rating: 4.8, tags: ['Root Veg', 'Potato', 'Onion'] },
-  { id: 'v2', name: 'Suresh Greenfield Agro', email: 'suresh.agro@yahoo.com', phone: '+91 98202 22334', rating: 4.9, tags: ['Leafy', 'Tomato', 'Capsicum'] },
-  { id: 'v3', name: 'APMC Patil & Sons', email: 'patil.apmc@rediffmail.com', phone: '+91 98203 33445', rating: 4.6, tags: ['General Veg', 'Cauliflower', 'Bhindi'] },
-  { id: 'v4', name: 'Kisan Fresh Fruits Hub', email: 'kisan.fruits@outlook.com', phone: '+91 98204 44556', rating: 4.7, tags: ['Fruits', 'Pomegranate', 'Banana'] }
-];
+// Load vendors from database
+function getVendors() {
+  const db = readDb();
+  return db.vendors || [];
+}
 
-// Default sample indent items
+// Default sample items
 const defaultSampleItems = [
   { sku_code: 'PLK-VEG-POT-01', item_name: 'Potato Agra Fresh (ज्योति आलू)', category: 'Vegetables', unit: 'kg', required_qty: 150, target_rate: 22.50 },
   { sku_code: 'PLK-VEG-ONI-02', item_name: 'Onion Nashik Red (लाल प्याज)', category: 'Vegetables', unit: 'kg', required_qty: 120, target_rate: 28.00 },
@@ -66,38 +72,39 @@ function createIndentFromItems(items, sourceTitle = 'Nightly Indent (12:30 AM)')
       required_qty: parseFloat(item.required_qty),
       allocated_qty: 0,
       remaining_qty: parseFloat(item.required_qty),
+      avg_procured_rate: 0,
       status: 'OPEN', // 'OPEN', 'PARTIALLY_FULFILLED', 'FULFILLED'
       matched: item.matched !== false,
       mandi_spec: item.mandi_spec || null,
       warning: item.warning || null,
-      allocations: [] // [{ id, vendor_id, vendor_name, quantity, timestamp, status: 'CONFIRMED'|'BACKED_OUT' }]
+      bids: [], // [{ id, vendor_id, vendor_name, quoted_rate, quantity, allocated_qty, allocation_status, timestamp, status }]
+      allocations: [] // Winning allocations
     }))
   };
 }
 
-// In-Memory state
 let currentIndent = createIndentFromItems(defaultSampleItems);
 let auditLogs = [
   {
     id: 'log-0',
     type: 'SYSTEM',
-    title: 'Indent Loaded',
-    message: 'Nightly Indent generated with 10 SKUs (Total 770 kg). Live requirement open for suppliers.',
+    title: 'Indent Distributed',
+    message: 'Nightly Indent loaded with 10 SKUs. Requirements distributed to suppliers based on their supply catalogues.',
     timestamp: new Date().toISOString(),
     severity: 'info'
   }
 ];
 
-// Helper to recalculate summary
 function calculateSummary() {
   if (!currentIndent || !currentIndent.items) {
-    return { total_skus: 0, total_demand_kg: 0, total_allocated_kg: 0, total_remaining_kg: 0, fill_rate_pct: 0, fulfilled_skus: 0 };
+    return { total_skus: 0, total_demand_kg: 0, total_allocated_kg: 0, total_remaining_kg: 0, fill_rate_pct: 0, fulfilled_skus: 0, total_estimated_cost: 0 };
   }
   const total_skus = currentIndent.items.length;
   let total_demand_kg = 0;
   let total_allocated_kg = 0;
   let total_remaining_kg = 0;
   let fulfilled_skus = 0;
+  let total_cost = 0;
 
   currentIndent.items.forEach(item => {
     total_demand_kg += item.required_qty;
@@ -106,6 +113,9 @@ function calculateSummary() {
     if (item.status === 'FULFILLED') {
       fulfilled_skus += 1;
     }
+    (item.allocations || []).forEach(a => {
+      total_cost += (a.quantity * (a.quoted_rate || item.target_rate));
+    });
   });
 
   const fill_rate_pct = total_demand_kg > 0 
@@ -118,54 +128,33 @@ function calculateSummary() {
     total_allocated_kg,
     total_remaining_kg,
     fill_rate_pct,
-    fulfilled_skus
+    fulfilled_skus,
+    total_estimated_cost: Math.round(total_cost)
   };
 }
 
-// ================= AUTHENTICATION APIS =================
-
-/**
- * Authentication Rule:
- * Email ending in @pluckk.co.in or @pluckk.in => ADMIN ACCESS
- * Any other email => RESTRICTED ACCESS (Vendor / Supplier Portal)
- */
-function evaluateRole(email) {
-  if (!email || typeof email !== 'string') {
-    return { isAdmin: false, role: 'VENDOR' };
-  }
-  const normalized = email.trim().toLowerCase();
-  const isAdmin = normalized.endsWith('@pluckk.co.in') || normalized.endsWith('@pluckk.in');
-  return {
-    isAdmin,
-    role: isAdmin ? 'ADMIN' : 'VENDOR',
-    normalizedEmail: normalized
-  };
-}
-
+// ================= AUTHENTICATION APIS (3-Tier Access) =================
 app.post('/api/auth/login', (req, res) => {
   const { email, name } = req.body;
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Valid email address is required' });
   }
 
-  const { isAdmin, role, normalizedEmail } = evaluateRole(email);
+  const { role, isAdmin, isSourcing, normalizedEmail } = evaluateRole(email);
   const db = readDb();
 
   let user = (db.users || []).find(u => u.email.toLowerCase() === normalizedEmail);
 
   if (!user) {
-    // Auto register user
     const defaultName = name || (
-      isAdmin 
-        ? `Pluckk Official (${normalizedEmail.split('@')[0]})` 
-        : `${normalizedEmail.split('@')[0]} Supplier`
+      isAdmin ? 'Om Mahindroo (Admin)' :
+      isSourcing ? `Pluckk Sourcing (${normalizedEmail.split('@')[0]})` :
+      `${normalizedEmail.split('@')[0]} Mandi Supplier`
     );
 
-    // If vendor, see if an existing pre-configured vendor has this email
-    let matchingVendor = vendorsList.find(v => v.email && v.email.toLowerCase() === normalizedEmail);
     let vendorId = null;
-
-    if (!isAdmin) {
+    if (role === 'VENDOR') {
+      let matchingVendor = (db.vendors || []).find(v => v.email && v.email.toLowerCase() === normalizedEmail);
       if (matchingVendor) {
         vendorId = matchingVendor.id;
       } else {
@@ -175,10 +164,15 @@ app.post('/api/auth/login', (req, res) => {
           name: defaultName,
           email: normalizedEmail,
           phone: '+91 98xxx xxxxx',
-          rating: 5.0,
-          tags: ['Fresh Produce']
+          supplied_skus: ['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03'], // Default supply root/staple
+          ratings: {
+            quality: 4.8,
+            price: 4.7,
+            fill_rate: 4.8,
+            delivery_time: 4.7
+          }
         };
-        vendorsList.push(matchingVendor);
+        db.vendors.push(matchingVendor);
       }
     }
 
@@ -188,6 +182,7 @@ app.post('/api/auth/login', (req, res) => {
       name: defaultName,
       role,
       isAdmin,
+      isSourcing,
       vendorId,
       created_at: new Date().toISOString()
     };
@@ -195,24 +190,11 @@ app.post('/api/auth/login', (req, res) => {
     db.users.push(user);
     writeDb(db);
   } else {
-    // If existing vendor, ensure vendorId is linked
-    if (!isAdmin && !user.vendorId) {
-      let matchingVendor = vendorsList.find(v => v.email && v.email.toLowerCase() === normalizedEmail);
-      if (!matchingVendor) {
-        user.vendorId = 'v-' + Date.now().toString().slice(-4);
-        vendorsList.push({
-          id: user.vendorId,
-          name: user.name,
-          email: normalizedEmail,
-          phone: '+91 98xxx xxxxx',
-          rating: 5.0,
-          tags: ['Fresh Produce']
-        });
-      } else {
-        user.vendorId = matchingVendor.id;
-      }
-      writeDb(db);
-    }
+    // Ensure roles are in sync with current definition
+    user.role = role;
+    user.isAdmin = isAdmin;
+    user.isSourcing = isSourcing;
+    writeDb(db);
   }
 
   const token = 'plk_token_' + Buffer.from(JSON.stringify({ id: user.id, email: user.email, role: user.role })).toString('base64');
@@ -222,8 +204,10 @@ app.post('/api/auth/login', (req, res) => {
     user,
     token,
     message: isAdmin 
-      ? 'Welcome to Pluckk Procurement Command Center (Admin Access)' 
-      : 'Welcome to Pluckk Supplier Portal (Restricted 1-to-1 Access)'
+      ? 'Welcome to Pluckk Admin Console (Full Control)' 
+      : isSourcing 
+      ? 'Welcome to Pluckk Sourcing Operations'
+      : 'Welcome to Pluckk Supplier Portal (1-to-1 Mode)'
   });
 });
 
@@ -248,19 +232,62 @@ app.get('/api/auth/verify', (req, res) => {
   }
 });
 
-// ================= STATE & DATA APIS =================
-
-app.get('/api/state', (req, res) => {
-  res.json({
-    indent: currentIndent,
-    vendors: vendorsList,
-    summary: calculateSummary(),
-    logs: auditLogs.slice(-50)
-  });
+// ================= VENDOR & CATALOG APIS =================
+app.get('/api/vendors', (req, res) => {
+  const vendors = getVendors().map(v => ({
+    ...v,
+    compositeRating: getCompositeRating(v.ratings)
+  }));
+  res.json(vendors);
 });
 
-app.get('/api/vendors', (req, res) => {
-  res.json(vendorsList);
+// Update a vendor's supply catalogue (What they supply)
+app.post('/api/vendors/:id/catalog', (req, res) => {
+  const vendorId = req.params.id;
+  const { supplied_skus } = req.body;
+
+  if (!Array.isArray(supplied_skus)) {
+    return res.status(400).json({ error: 'supplied_skus must be an array of SKU codes' });
+  }
+
+  const db = readDb();
+  const vendor = (db.vendors || []).find(v => v.id === vendorId);
+  if (!vendor) {
+    return res.status(404).json({ error: 'Vendor not found' });
+  }
+
+  vendor.supplied_skus = supplied_skus;
+  writeDb(db);
+
+  io.emit('vendor:catalog_updated', {
+    vendor_id: vendor.id,
+    vendor_name: vendor.name,
+    supplied_skus: vendor.supplied_skus
+  });
+
+  res.json({ success: true, vendor });
+});
+
+// Update a vendor's 4 rating pillars (Admin only)
+app.post('/api/vendors/:id/ratings', (req, res) => {
+  const vendorId = req.params.id;
+  const { quality, price, fill_rate, delivery_time } = req.body;
+
+  const db = readDb();
+  const vendor = (db.vendors || []).find(v => v.id === vendorId);
+  if (!vendor) {
+    return res.status(404).json({ error: 'Vendor not found' });
+  }
+
+  vendor.ratings = {
+    quality: parseFloat(quality || vendor.ratings?.quality || 4.0),
+    price: parseFloat(price || vendor.ratings?.price || 4.0),
+    fill_rate: parseFloat(fill_rate || vendor.ratings?.fill_rate || 4.0),
+    delivery_time: parseFloat(delivery_time || vendor.ratings?.delivery_time || 4.0)
+  };
+  writeDb(db);
+
+  res.json({ success: true, vendor, compositeRating: getCompositeRating(vendor.ratings) });
 });
 
 // ================= SKU MASTER APIS =================
@@ -299,14 +326,28 @@ app.post('/api/sku-master', (req, res) => {
   res.json({ success: true, item: entry, total: db.skuMaster.length });
 });
 
-// Reset or load default indent
+// ================= INDENT & STATE APIS =================
+app.get('/api/state', (req, res) => {
+  const vendors = getVendors().map(v => ({
+    ...v,
+    compositeRating: getCompositeRating(v.ratings)
+  }));
+
+  res.json({
+    indent: currentIndent,
+    vendors,
+    summary: calculateSummary(),
+    logs: auditLogs.slice(-50)
+  });
+});
+
 app.post('/api/reset', (req, res) => {
   currentIndent = createIndentFromItems(defaultSampleItems, 'Default 12:30 AM Indent (Reset)');
   const log = {
     id: 'log-' + Date.now(),
     type: 'RESET',
     title: 'Indent Reset',
-    message: 'System reloaded fresh 12:30 AM sample indent. All allocations cleared.',
+    message: 'System reloaded fresh 12:30 AM sample indent. All quotations cleared.',
     timestamp: new Date().toISOString(),
     severity: 'info'
   };
@@ -321,7 +362,6 @@ app.post('/api/reset', (req, res) => {
   res.json({ success: true, indent: currentIndent });
 });
 
-// Upload CSV / JSON indent
 app.post('/api/upload-indent', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -342,7 +382,7 @@ app.post('/api/upload-indent', upload.single('file'), (req, res) => {
         id: 'log-' + Date.now(),
         type: 'UPLOAD',
         title: 'New Indent Uploaded (JSON)',
-        message: `Parsed ${currentIndent.items.length} SKUs from ${req.file.originalname}. Broadcasting to suppliers.`,
+        message: `Parsed ${currentIndent.items.length} SKUs. Requirements routed based on supplier catalogues.`,
         timestamp: new Date().toISOString(),
         severity: 'info'
       };
@@ -368,9 +408,9 @@ app.post('/api/upload-indent', upload.single('file'), (req, res) => {
       if (row.sku_code || row.item_name) {
         items.push({
           sku_code: row.sku_code || `SKU-${items.length + 1}`,
-          item_name: row.item_name || 'Unnamed Article',
-          category: row.category || 'Vegetables',
-          unit: row.unit || 'kg',
+          item_name: row.item_name || '',
+          category: row.category || '',
+          unit: row.unit || '',
           required_qty: parseFloat(row.required_qty || 0),
           target_rate: parseFloat(row.target_rate || 0)
         });
@@ -387,7 +427,7 @@ app.post('/api/upload-indent', upload.single('file'), (req, res) => {
         id: 'log-' + Date.now(),
         type: 'UPLOAD',
         title: 'New Indent Uploaded (CSV)',
-        message: `Uploaded ${items.length} SKUs from ${req.file.originalname}. Live requirements broadcasted.`,
+        message: `Uploaded ${items.length} SKUs. Requirements segregated and dispatched to suppliers according to catalogue.`,
         timestamp: new Date().toISOString(),
         severity: 'info'
       };
@@ -406,15 +446,13 @@ app.post('/api/upload-indent', upload.single('file'), (req, res) => {
     });
 });
 
-// Export Purchase Order (PO) format
 app.get('/api/export-po', (req, res) => {
   const rows = [];
-  rows.push(['SKU Code', 'Article Name', 'Category', 'Unit', 'Target Rate', 'Required Qty', 'Fulfilled Qty', 'Vendor Confirmations', 'Status']);
+  rows.push(['SKU Code', 'Article Name', 'Category', 'Unit', 'Target Rate (Rs)', 'Procured Avg Rate (Rs)', 'Required Qty', 'Fulfilled Qty', 'Awarded Suppliers (Rate & Qty)', 'Status']);
 
   currentIndent.items.forEach(item => {
-    const vendorSummary = item.allocations
-      .filter(a => a.status === 'CONFIRMED')
-      .map(a => `${a.vendor_name}: ${a.quantity} ${item.unit}`)
+    const vendorSummary = (item.allocations || [])
+      .map(a => `${a.vendor_name}: ${a.quantity}${item.unit} @ Rs.${a.quoted_rate}`)
       .join(' | ') || 'None';
 
     rows.push([
@@ -423,6 +461,7 @@ app.get('/api/export-po', (req, res) => {
       `"${item.category}"`,
       `"${item.unit}"`,
       item.target_rate,
+      item.avg_procured_rate || item.target_rate,
       item.required_qty,
       item.allocated_qty,
       `"${vendorSummary}"`,
@@ -432,71 +471,81 @@ app.get('/api/export-po', (req, res) => {
 
   const csvContent = rows.map(r => r.join(',')).join('\n');
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="pluckk-morning-po-' + Date.now() + '.csv"');
+  res.setHeader('Content-Disposition', 'attachment; filename="pluckk-po-' + Date.now() + '.csv"');
   res.send(csvContent);
 });
 
-// Socket.IO Real-Time Engine
+// ================= SOCKET.IO REAL-TIME BIDDING & ALLOCATION ENGINE =================
 io.on('connection', (socket) => {
   socket.on('get:state', () => {
+    const vendors = getVendors().map(v => ({
+      ...v,
+      compositeRating: getCompositeRating(v.ratings)
+    }));
+
     socket.emit('state:init', {
       indent: currentIndent,
-      vendors: vendorsList,
+      vendors,
       summary: calculateSummary(),
       logs: auditLogs.slice(-50)
     });
   });
 
-  // 1. Vendor Confirms / Claims Quantity
-  socket.on('vendor:confirm', (payload) => {
-    const { vendor_id, vendor_name, sku_code, quantity } = payload;
+  // 1. Vendor Submits a Quote / Price & Quantity Bid
+  socket.on('vendor:submit_bid', (payload) => {
+    const { vendor_id, vendor_name, sku_code, quantity, quoted_rate } = payload;
     const qty = parseFloat(quantity);
+    const rate = parseFloat(quoted_rate);
 
-    if (!qty || qty <= 0) {
-      return socket.emit('error:response', { message: 'Invalid quantity' });
+    if (!qty || qty <= 0 || !rate || rate <= 0) {
+      return socket.emit('error:response', { message: 'Please enter valid quantity and price per kg' });
     }
 
     const item = currentIndent.items.find(i => i.sku_code === sku_code);
     if (!item) {
-      return socket.emit('error:response', { message: 'SKU not found' });
+      return socket.emit('error:response', { message: 'SKU not found in active indent' });
     }
 
-    if (item.remaining_qty <= 0) {
-      return socket.emit('error:response', { 
-        message: `Sorry! ${item.item_name} has already been fulfilled by another supplier. Stock requirement closed.` 
-      });
+    if (!item.bids) item.bids = [];
+
+    // Find existing bid from this vendor for this SKU
+    let existingBid = item.bids.find(b => b.vendor_id === vendor_id);
+    if (existingBid) {
+      existingBid.quantity = qty;
+      existingBid.quoted_rate = rate;
+      existingBid.timestamp = new Date().toISOString();
+      existingBid.status = 'ACTIVE';
+    } else {
+      existingBid = {
+        id: 'bid-' + vendor_id + '-' + Date.now(),
+        vendor_id,
+        vendor_name,
+        quantity: qty,
+        quoted_rate: rate,
+        timestamp: new Date().toISOString(),
+        status: 'ACTIVE'
+      };
+      item.bids.push(existingBid);
     }
 
-    // Race-condition clamp
-    const actualAllocated = Math.min(qty, item.remaining_qty);
-    item.allocated_qty += actualAllocated;
-    item.remaining_qty = Math.max(0, item.required_qty - item.allocated_qty);
+    // Re-run Lowest Price (L1) Greedy Allocation with Rating Tie-Breaker
+    const allVendors = getVendors();
+    recalculateL1Allocations(item, allVendors);
 
     const isFullNow = item.remaining_qty === 0;
-    item.status = isFullNow ? 'FULFILLED' : 'PARTIALLY_FULFILLED';
+    const isAwarded = existingBid.allocated_qty > 0;
 
-    const allocationId = 'alloc-' + Date.now();
-    const newAllocation = {
-      id: allocationId,
-      vendor_id,
-      vendor_name,
-      quantity: actualAllocated,
-      requested_quantity: qty,
-      timestamp: new Date().toISOString(),
-      status: 'CONFIRMED'
-    };
-    item.allocations.push(newAllocation);
-
-    // Audit Log
     const log = {
       id: 'log-' + Date.now(),
-      type: isFullNow ? 'FULFILLED' : 'PARTIAL',
-      title: isFullNow ? `✅ SKU Closed: ${item.item_name}` : `⚠️ Partial Claim: ${item.item_name}`,
-      message: isFullNow
-        ? `${vendor_name} confirmed ${actualAllocated} ${item.unit}. Requirement 100% complete! Other vendors notified that stock is locked.`
-        : `${vendor_name} confirmed ${actualAllocated} ${item.unit}. ${item.remaining_qty} ${item.unit} still required! Real-time alerts pushed to remaining vendors.`,
+      type: isAwarded ? 'BID_AWARDED' : 'BID_OUTBID',
+      title: isAwarded 
+        ? `🟢 L1 Allocation: ${item.item_name}` 
+        : `⚠️ Outbid Notice: ${item.item_name}`,
+      message: isAwarded
+        ? `${vendor_name} quoted ₹${rate}/${item.unit} for ${qty} ${item.unit}. Awarded: ${existingBid.allocated_qty} ${item.unit}! (Remaining demand: ${item.remaining_qty} ${item.unit}).`
+        : `${vendor_name} quoted ₹${rate}/${item.unit}. Currently outbid by lower-rate suppliers.`,
       timestamp: new Date().toISOString(),
-      severity: isFullNow ? 'success' : 'warning',
+      severity: isAwarded ? (isFullNow ? 'success' : 'info') : 'warning',
       sku_code: item.sku_code
     };
     auditLogs.push(log);
@@ -508,42 +557,46 @@ io.on('connection', (socket) => {
       vendor_action: {
         vendor_id,
         vendor_name,
-        action: 'CONFIRM',
-        allocated: actualAllocated
+        action: 'BID',
+        quoted_rate: rate,
+        allocated_qty: existingBid.allocated_qty,
+        allocation_status: existingBid.allocation_status
       }
     });
   });
 
-  // 2. The 5:00 AM Twist: Vendor Backs Out or Drops Stock
+  // 2. Vendor Shortfall / Backout (Anytime)
   socket.on('vendor:backout', (payload) => {
     const { vendor_id, vendor_name, sku_code, reason, drop_qty } = payload;
     const item = currentIndent.items.find(i => i.sku_code === sku_code);
     if (!item) return;
 
-    const alloc = item.allocations.find(a => a.vendor_id === vendor_id && a.status === 'CONFIRMED');
-    if (!alloc) {
-      return socket.emit('error:response', { message: 'No active confirmation found for this vendor' });
+    const bid = (item.bids || []).find(b => b.vendor_id === vendor_id && b.status === 'ACTIVE');
+    if (!bid) {
+      return socket.emit('error:response', { message: 'No active bid found for this supplier' });
     }
 
-    const releasedQty = drop_qty ? Math.min(parseFloat(drop_qty), alloc.quantity) : alloc.quantity;
+    const previousAllocated = bid.allocated_qty || 0;
+    const requestedDrop = drop_qty ? parseFloat(drop_qty) : bid.quantity;
+    const actualDrop = Math.min(requestedDrop, bid.quantity);
 
-    if (releasedQty === alloc.quantity) {
-      alloc.status = 'BACKED_OUT';
-      alloc.backed_out_reason = reason || 'Unable to supply / stock shortage';
+    if (actualDrop === bid.quantity) {
+      bid.status = 'BACKED_OUT';
+      bid.backed_out_reason = reason || 'Stock shortage reported';
+      bid.allocated_qty = 0;
     } else {
-      alloc.quantity -= releasedQty;
+      bid.quantity -= actualDrop;
     }
 
-    // Return stock to remaining pool!
-    item.allocated_qty = Math.max(0, item.allocated_qty - releasedQty);
-    item.remaining_qty = item.required_qty - item.allocated_qty;
-    item.status = item.allocated_qty === 0 ? 'OPEN' : 'PARTIALLY_FULFILLED';
+    // Re-run L1 engine to re-award to next best vendor or open pool!
+    const allVendors = getVendors();
+    recalculateL1Allocations(item, allVendors);
 
     const log = {
       id: 'log-' + Date.now(),
       type: 'SHORTFALL_ALERT',
-      title: `🚨 SHORTFALL ALERT: ${item.item_name} (${releasedQty} ${item.unit} Released)`,
-      message: `${vendor_name} reported stock dropout/shortfall of ${releasedQty} ${item.unit}! (Reason: ${reason || 'Supply shortage'}). System immediately reopened ${item.remaining_qty} ${item.unit} to all other suppliers.`,
+      title: `🚨 SHORTFALL ALERT: ${item.item_name} (${actualDrop} ${item.unit} Released)`,
+      message: `${vendor_name} reported shortfall of ${actualDrop} ${item.unit}! (Reason: ${reason || 'Supply shortage'}). System automatically re-evaluated lowest cost bids. Remaining open: ${item.remaining_qty} ${item.unit}.`,
       timestamp: new Date().toISOString(),
       severity: 'critical',
       sku_code: item.sku_code,
@@ -560,12 +613,12 @@ io.on('connection', (socket) => {
         vendor_id,
         vendor_name,
         action: 'BACKOUT',
-        released_qty: releasedQty
+        released_qty: actualDrop
       }
     });
   });
 
-  // 3. Admin Emergency Action: Broadcast SOS for Shortfall
+  // 3. Admin/Sourcing SOS broadcast
   socket.on('admin:broadcast_sos', (payload) => {
     const { sku_code } = payload;
     const item = currentIndent.items.find(i => i.sku_code === sku_code);
@@ -574,8 +627,8 @@ io.on('connection', (socket) => {
     const log = {
       id: 'log-' + Date.now(),
       type: 'SOS_BROADCAST',
-      title: `📢 PLUCKK URGENT SOS: ${item.item_name}`,
-      message: `Priority Mandi Alert sent to all suppliers: Need ${item.remaining_qty} ${item.unit} urgently! First supplier to confirm will be awarded order.`,
+      title: `📢 URGENT SOS: ${item.item_name}`,
+      message: `Priority Mandi Alert sent to eligible suppliers: Need ${item.remaining_qty} ${item.unit} urgently at Target Rate ₹${item.target_rate}/${item.unit}! Submit best quote now.`,
       timestamp: new Date().toISOString(),
       severity: 'warning',
       sku_code: item.sku_code
@@ -587,6 +640,7 @@ io.on('connection', (socket) => {
       item_name: item.item_name,
       remaining_qty: item.remaining_qty,
       unit: item.unit,
+      target_rate: item.target_rate,
       log
     });
   });
@@ -606,5 +660,5 @@ if (fs.existsSync(clientDistPath)) {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
-  console.log(`Pluckk Order Management Real-Time Engine running on http://localhost:${PORT}`);
+  console.log(`Pluckk Procurement & L1 Allocation Engine running on http://localhost:${PORT}`);
 });

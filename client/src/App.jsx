@@ -9,7 +9,7 @@ import LoginPage from './components/LoginPage';
 import { 
   Building2, Smartphone, SplitSquareVertical, Bell, 
   Wifi, WifiOff, AlertTriangle, CheckCircle2, ShieldAlert,
-  Layers, RefreshCw, LogOut, ShieldCheck, User
+  Layers, RefreshCw, LogOut, ShieldCheck, User, Award, ShoppingCart
 } from 'lucide-react';
 
 const SOCKET_URL = undefined;
@@ -31,6 +31,7 @@ export default function App() {
   
   const [indent, setIndent] = useState(null);
   const [vendors, setVendors] = useState([]);
+  const [skuMaster, setSkuMaster] = useState([]);
   const [summary, setSummary] = useState({
     total_skus: 0,
     total_demand_kg: 0,
@@ -43,16 +44,35 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
-  // If logged in as restricted vendor, lock activeTab to 'vendor' and set vendorId
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const isSourcing = currentUser?.role === 'SOURCING' || isAdmin;
+  const isVendor = currentUser?.role === 'VENDOR';
+
+  // Load SKU Master
+  const fetchSkuMaster = async () => {
+    try {
+      const res = await fetch('/api/sku-master');
+      const data = await res.json();
+      setSkuMaster(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSkuMaster();
+  }, []);
+
+  // Lock active tab based on role
   useEffect(() => {
     if (currentUser) {
-      if (!currentUser.isAdmin) {
+      if (isVendor) {
         setActiveTab('vendor');
         if (currentUser.vendorId) {
           setCurrentVendorId(currentUser.vendorId);
         }
       } else {
-        setActiveTab('simulator');
+        setActiveTab(isAdmin ? 'simulator' : 'admin');
       }
     }
   }, [currentUser]);
@@ -103,6 +123,13 @@ export default function App() {
       }
     });
 
+    s.on('vendor:catalog_updated', (data) => {
+      setVendors(prev => prev.map(v => 
+        v.id === data.vendor_id ? { ...v, supplied_skus: data.supplied_skus } : v
+      ));
+      showToast(`${data.vendor_name}'s catalogue updated (${data.supplied_skus.length} articles)`, 'info');
+    });
+
     s.on('notification:sos', (data) => {
       if (data.log) {
         setLogs(prev => [...prev.slice(-49), data.log]);
@@ -134,14 +161,15 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Vendor Action: Confirm / Claim
-  const handleConfirmQuantity = (vendor_id, vendor_name, sku_code, quantity) => {
+  // Vendor Action: Submit Bid (Rate + Qty)
+  const handleBid = (vendor_id, vendor_name, sku_code, quantity, quoted_rate) => {
     if (!socket) return;
-    socket.emit('vendor:confirm', {
+    socket.emit('vendor:submit_bid', {
       vendor_id,
       vendor_name,
       sku_code,
-      quantity
+      quantity,
+      quoted_rate
     });
   };
 
@@ -157,7 +185,43 @@ export default function App() {
     });
   };
 
-  // Admin Action: Emergency SOS Broadcast
+  // Save Vendor Supply Catalog
+  const handleSaveCatalog = async (vendor_id, supplied_skus) => {
+    try {
+      const res = await fetch(`/api/vendors/${vendor_id}/catalog`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ supplied_skus })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setVendors(prev => prev.map(v => v.id === vendor_id ? data.vendor : v));
+        showToast('Supply catalogue saved successfully!', 'success');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Update Vendor 4-Pillar Ratings (Admin only)
+  const handleUpdateVendorRatings = async (vendor_id, ratings) => {
+    try {
+      const res = await fetch(`/api/vendors/${vendor_id}/ratings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ratings)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setVendors(prev => prev.map(v => v.id === vendor_id ? data.vendor : v));
+        showToast('Vendor 4-pillar ratings updated!', 'success');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Admin/Sourcing Action: Emergency SOS Broadcast
   const handleBroadcastSOS = (sku_code) => {
     if (!socket) return;
     socket.emit('admin:broadcast_sos', { sku_code });
@@ -172,33 +236,30 @@ export default function App() {
     }
   };
 
-  // 5:00 AM Crisis Simulation Helper
+  // Simulation Helper
   const handleSimulate5AMBackout = () => {
     if (!indent || !indent.items) return;
-    const itemWithAlloc = indent.items.find(i => 
-      i.allocations.some(a => a.status === 'CONFIRMED')
+    const itemWithBid = indent.items.find(i => 
+      (i.bids || []).some(b => b.status === 'ACTIVE' && b.allocated_qty > 0)
     );
 
-    if (itemWithAlloc) {
-      const activeAlloc = itemWithAlloc.allocations.find(a => a.status === 'CONFIRMED');
+    if (itemWithBid) {
+      const winningBid = itemWithBid.bids.find(b => b.status === 'ACTIVE' && b.allocated_qty > 0);
       handleBackout(
-        activeAlloc.vendor_id,
-        activeAlloc.vendor_name,
-        itemWithAlloc.sku_code,
+        winningBid.vendor_id,
+        winningBid.vendor_name,
+        itemWithBid.sku_code,
         'Damaged batch / stock shortage reported, releasing allocation',
-        activeAlloc.quantity
+        winningBid.allocated_qty
       );
     } else {
-      showToast('First claim a stock item (e.g. 70kg Potato) to simulate a shortfall release!', 'warning');
+      showToast('First submit a quote on an item (e.g. ₹27 for 50kg Potato) to simulate a shortfall release!', 'warning');
     }
   };
 
-  // If user is not logged in, show Login Screen
   if (!currentUser) {
     return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
-
-  const isAdmin = currentUser.isAdmin;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -213,55 +274,59 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-black tracking-tight text-white">Pluckk</h1>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                   isAdmin 
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' 
+                    : isSourcing
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                     : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                 }`}>
-                  {isAdmin ? 'ADMIN CONSOLE' : 'SUPPLIER PORTAL (RESTRICTED)'}
+                  {isAdmin ? '👑 EXECUTIVE ADMIN' : isSourcing ? '🛒 SOURCING OPS' : '🚚 SUPPLIER PORTAL (1-to-1)'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Night Indent (12:30 AM) & Real-Time Procurement Allocation</p>
+              <p className="text-[11px] text-slate-400">Night Indent (12:30 AM) & Lowest-Price (L1) Engine</p>
             </div>
           </div>
 
-          {/* View Mode Switcher Tabs (Only visible to Admin) */}
-          {isAdmin ? (
-            <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs font-semibold">
-              <button
-                onClick={() => setActiveTab('simulator')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-                  activeTab === 'simulator'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <SplitSquareVertical size={14} />
-                <span className="hidden sm:inline">Split Simulator</span>
-              </button>
+          {/* View Mode Switcher Tabs (Only visible to Admin & Sourcing) */}
+          {isSourcing ? (
+            <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-2xl border border-slate-700/60 text-xs font-semibold">
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('simulator')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
+                    activeTab === 'simulator'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <SplitSquareVertical size={14} />
+                  <span className="hidden sm:inline">Split Simulator</span>
+                </button>
+              )}
 
               <button
                 onClick={() => setActiveTab('admin')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
                   activeTab === 'admin'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Building2 size={14} />
-                <span>Command Center</span>
+                <span>{isAdmin ? 'Admin Console' : 'Sourcing Console'}</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('vendor')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
                   activeTab === 'vendor'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Smartphone size={14} />
-                <span>Vendor Mobile</span>
+                <span>Vendor Mobile View</span>
               </button>
             </div>
           ) : (
@@ -274,12 +339,12 @@ export default function App() {
           {/* Right Action Section: User Info & Logout */}
           <div className="flex items-center gap-3">
             {connected ? (
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Live</span>
+                <span>Live Sync</span>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-red-400 font-medium bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-red-400 font-medium bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20">
                 <WifiOff size={12} />
                 <span>Offline</span>
               </div>
@@ -305,22 +370,26 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {isAdmin && activeTab === 'simulator' && (
+        {isSourcing && activeTab === 'simulator' && (
           <SplitViewSimulator
             indent={indent}
             summary={summary}
             vendors={vendors}
             logs={logs}
-            onConfirmQuantity={handleConfirmQuantity}
+            onBid={handleBid}
             onBackout={handleBackout}
             onBroadcastSOS={handleBroadcastSOS}
             onReset={handleReset}
             onOpenUpload={() => setIsUploadOpen(true)}
             onSimulate5AMBackout={handleSimulate5AMBackout}
+            currentUser={currentUser}
+            skuMaster={skuMaster}
+            onSaveCatalog={handleSaveCatalog}
+            onUpdateVendorRatings={handleUpdateVendorRatings}
           />
         )}
 
-        {isAdmin && activeTab === 'admin' && (
+        {isSourcing && activeTab === 'admin' && (
           <div className="space-y-6">
             <AdminDashboard
               indent={indent}
@@ -331,22 +400,28 @@ export default function App() {
               onReset={handleReset}
               onOpenUpload={() => setIsUploadOpen(true)}
               onSimulate5AMBackout={handleSimulate5AMBackout}
+              currentUser={currentUser}
+              skuMaster={skuMaster}
+              onSaveCatalog={handleSaveCatalog}
+              onUpdateVendorRatings={handleUpdateVendorRatings}
             />
             <NotificationFeed logs={logs} />
           </div>
         )}
 
-        {(!isAdmin || activeTab === 'vendor') && (
+        {(!isSourcing || activeTab === 'vendor') && (
           <div className="py-2">
             <VendorPortal
               vendors={vendors}
               currentVendorId={currentVendorId}
               onSelectVendor={setCurrentVendorId}
               indent={indent}
-              onConfirmQuantity={handleConfirmQuantity}
+              onBid={handleBid}
               onBackout={handleBackout}
-              isRestricted={!isAdmin}
+              isRestricted={isVendor}
               currentUser={currentUser}
+              skuMaster={skuMaster}
+              onSaveCatalog={handleSaveCatalog}
             />
           </div>
         )}
@@ -373,7 +448,7 @@ export default function App() {
             )}
             <div>
               <div className="font-bold text-xs uppercase tracking-wider opacity-75">
-                {toast.severity === 'critical' ? 'Urgent Alert' : 'Mandi Broadcast'}
+                {toast.severity === 'critical' ? 'Urgent Alert' : 'Procurement Broadcast'}
               </div>
               <div className="text-xs font-semibold mt-0.5 leading-snug">{toast.message}</div>
             </div>
@@ -386,7 +461,7 @@ export default function App() {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         onUploadSuccess={() => {
-          showToast('New Indent uploaded & broadcasted to all suppliers!', 'success');
+          showToast('New Indent uploaded & broadcasted to matching suppliers!', 'success');
         }}
       />
     </div>

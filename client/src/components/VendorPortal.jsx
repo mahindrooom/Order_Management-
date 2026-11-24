@@ -2,47 +2,81 @@ import React, { useState } from 'react';
 import { 
   Package, Check, CheckCircle2, AlertCircle, Lock, 
   Send, AlertTriangle, ChevronDown, User, ShieldCheck, 
-  Clock, ArrowRight, CornerDownRight, X
+  Clock, ArrowRight, CornerDownRight, X, TrendingDown, Star
 } from 'lucide-react';
+import VendorCatalogModal from './VendorCatalogModal';
 
 export default function VendorPortal({ 
   vendors, 
   currentVendorId, 
   onSelectVendor, 
   indent, 
-  onConfirmQuantity, 
+  onConfirmQuantity,
+  onBid,
   onBackout, 
   compact = false,
   isRestricted = false,
-  currentUser = null
+  currentUser = null,
+  skuMaster = [],
+  onSaveCatalog
 }) {
   const currentVendor = vendors.find(v => v.id === currentVendorId) || vendors[0];
   const [selectedSku, setSelectedSku] = useState(null);
-  const [customQty, setCustomQty] = useState('');
+  const [quotedRate, setQuotedRate] = useState('');
+  const [quotedQty, setQuotedQty] = useState('');
   const [backoutReason, setBackoutReason] = useState('');
   const [backoutSku, setBackoutSku] = useState(null);
   const [backoutDropQty, setBackoutDropQty] = useState('');
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
-  // Find all commitments made by this vendor
+  // Filter items: A vendor ONLY sees what is in their supply catalog!
+  const mySuppliedSkus = currentVendor?.supplied_skus || [];
+  const visibleItems = (indent?.items || []).filter(item => mySuppliedSkus.includes(item.sku_code));
+
+  // Find all awarded commitments for this vendor
   const myCommitments = (indent?.items || []).flatMap(item => {
-    const alloc = item.allocations.find(a => a.vendor_id === currentVendor.id && a.status === 'CONFIRMED');
-    if (alloc) {
+    const myBid = (item.bids || []).find(b => b.vendor_id === currentVendor.id && b.status === 'ACTIVE' && b.allocated_qty > 0);
+    if (myBid) {
       return [{
         sku_code: item.sku_code,
         item_name: item.item_name,
         unit: item.unit,
         target_rate: item.target_rate,
-        committed_qty: alloc.quantity,
-        timestamp: alloc.timestamp
+        quoted_rate: myBid.quoted_rate,
+        committed_qty: myBid.allocated_qty,
+        total_bid_qty: myBid.quantity,
+        timestamp: myBid.timestamp
       }];
     }
     return [];
   });
 
-  const handleClaim = (sku_code, qty) => {
-    onConfirmQuantity(currentVendor.id, currentVendor.name, sku_code, qty);
+  const handleStartQuote = (item) => {
+    setSelectedSku(item.sku_code);
+    const existingBid = (item.bids || []).find(b => b.vendor_id === currentVendor.id && b.status === 'ACTIVE');
+    if (existingBid) {
+      setQuotedRate(existingBid.quoted_rate.toString());
+      setQuotedQty(existingBid.quantity.toString());
+    } else {
+      setQuotedRate(item.target_rate.toString());
+      setQuotedQty(item.remaining_qty > 0 ? item.remaining_qty.toString() : item.required_qty.toString());
+    }
+  };
+
+  const handleBidSubmit = (sku_code) => {
+    const rate = parseFloat(quotedRate);
+    const qty = parseFloat(quotedQty);
+    if (!rate || rate <= 0 || !qty || qty <= 0) return;
+
+    if (onBid) {
+      onBid(currentVendor.id, currentVendor.name, sku_code, qty, rate);
+    } else if (onConfirmQuantity) {
+      onConfirmQuantity(currentVendor.id, currentVendor.name, sku_code, qty);
+    }
+
     setSelectedSku(null);
-    setCustomQty('');
+    setQuotedRate('');
+    setQuotedQty('');
   };
 
   const handleBackoutSubmit = (e) => {
@@ -52,7 +86,7 @@ export default function VendorPortal({
       currentVendor.id, 
       currentVendor.name, 
       backoutSku.sku_code, 
-      backoutReason || 'Shortage in morning mandi',
+      backoutReason || 'Stock shortage reported',
       backoutDropQty ? parseFloat(backoutDropQty) : null
     );
     setBackoutSku(null);
@@ -63,10 +97,10 @@ export default function VendorPortal({
   return (
     <div className={`space-y-5 ${compact ? 'max-w-md mx-auto' : 'max-w-2xl mx-auto'}`}>
       {/* Mobile Top Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
               P
             </div>
             <div>
@@ -75,10 +109,18 @@ export default function VendorPortal({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full text-xs font-semibold border border-emerald-500/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Live Sync</span>
-          </div>
+          {/* Top-Right "My Supply Catalogue" Button (Placed right where user requested!) */}
+          <button
+            onClick={() => setIsCatalogModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95"
+            title="Manage what articles you supply to Pluckk"
+          >
+            <Package size={15} />
+            <span>My Supply Catalogue</span>
+            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+              {mySuppliedSkus.length}
+            </span>
+          </button>
         </div>
 
         {/* Vendor Selector Pill or Fixed Supplier View */}
@@ -90,9 +132,15 @@ export default function VendorPortal({
                 <span className="font-bold text-white text-sm">{currentUser?.name || currentVendor.name}</span>
                 <span className="text-[11px] text-slate-400 block font-mono">{currentUser?.email || currentVendor.email}</span>
               </div>
-              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-lg font-semibold">
-                1-to-1 Verified
-              </span>
+              <div className="text-right">
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg font-semibold block">
+                  1-to-1 Verified
+                </span>
+                <span className="text-[10px] text-amber-400 flex items-center gap-0.5 justify-end mt-1">
+                  <Star size={10} className="fill-amber-400 text-amber-400" />
+                  <span>★{currentVendor.compositeRating || 4.8} Score</span>
+                </span>
+              </div>
             </div>
           ) : (
             <div>
@@ -109,7 +157,7 @@ export default function VendorPortal({
                     }`}
                   >
                     <span className="truncate">{v.name.split(' ')[0]} {v.name.split(' ')[1] || ''}</span>
-                    <span className="text-[10px] opacity-75">★{v.rating}</span>
+                    <span className="text-[10px] opacity-75">★{v.compositeRating || 4.8}</span>
                   </button>
                 ))}
               </div>
@@ -118,47 +166,54 @@ export default function VendorPortal({
         </div>
       </div>
 
-      {/* 1-to-1 Privacy Note */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center gap-2.5 text-xs text-slate-400">
-        <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
-        <span>
-          <strong>1-to-1 Channel:</strong> You only see Pluckk's open demand. Other suppliers cannot see your rates or confirmed quantities.
-        </span>
+      {/* 1-to-1 Privacy & L1 Lowest Price Rule Note */}
+      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 text-xs text-slate-400 space-y-1">
+        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+          <ShieldCheck size={16} className="shrink-0" />
+          <span>1-to-1 Least-Cost Allocation Engine</span>
+        </div>
+        <p className="text-[11px] leading-relaxed">
+          Requirements are segregated based on your supply catalogue. Quote your best competitive rate — the system automatically awards orders to the <strong>minimum price (L1)</strong>, with vendor ratings (Quality, Price, Fill Rate, Time of Delivery) used as tie-breakers.
+        </p>
       </div>
 
-      {/* My Commitments Section */}
+      {/* My Confirmed Allocations Section */}
       {myCommitments.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-400" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                Your Confirmed Commitments ({myCommitments.length})
+                Your Approved Commitments ({myCommitments.length})
               </h3>
             </div>
-            <span className="text-[11px] text-emerald-400 font-medium">Ready for morning gate</span>
+            <span className="text-[11px] text-emerald-400 font-semibold">L1 Winning Bids</span>
           </div>
 
           <div className="space-y-2">
             {myCommitments.map((c) => (
               <div 
                 key={c.sku_code} 
-                className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between gap-3"
+                className="bg-slate-800/60 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-between gap-3"
               >
                 <div>
                   <div className="text-sm font-semibold text-white">{c.item_name}</div>
                   <div className="text-xs text-emerald-400 font-bold mt-0.5">
-                    {c.committed_qty} {c.unit} confirmed @ ₹{c.target_rate}/{c.unit}
+                    {c.committed_qty} {c.unit} approved @ ₹{c.quoted_rate}/{c.unit}
+                    {c.total_bid_qty > c.committed_qty && (
+                      <span className="text-slate-400 font-normal ml-1">
+                        (bid for {c.total_bid_qty} {c.unit})
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Instant Shortfall / Release Button */}
                 <button
                   onClick={() => {
                     setBackoutSku(c);
                     setBackoutDropQty(c.committed_qty.toString());
                   }}
-                  className="px-2.5 py-1.5 text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition shrink-0"
+                  className="px-2.5 py-1.5 text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl transition shrink-0"
                   title="Report stock shortfall or release your allocation"
                 >
                   Report Shortfall / Release
@@ -169,28 +224,28 @@ export default function VendorPortal({
         </div>
       )}
 
-      {/* Live Open Indent Items */}
+      {/* Live Open Indent Items (Filtered by this vendor's catalog) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Available Indent Requirements
+            Available Requirements (Matched to your Catalogue)
           </h3>
           <span className="text-xs text-slate-500">
-            {(indent?.items || []).filter(i => i.remaining_qty > 0).length} items open
+            {visibleItems.length} articles matching your catalogue
           </span>
         </div>
 
-        {(indent?.items || []).map((item) => {
+        {visibleItems.map((item) => {
           const isFulfilled = item.remaining_qty === 0;
-          const myAlloc = item.allocations.find(a => a.vendor_id === currentVendor.id && a.status === 'CONFIRMED');
+          const myBid = (item.bids || []).find(b => b.vendor_id === currentVendor.id && b.status === 'ACTIVE');
           const isSelected = selectedSku === item.sku_code;
 
           return (
             <div 
               key={item.sku_code}
-              className={`rounded-2xl border p-4 transition-all duration-200 ${
+              className={`rounded-3xl border p-4 transition-all duration-200 ${
                 isFulfilled 
-                  ? 'bg-slate-950/60 border-slate-800/50 opacity-60' 
+                  ? 'bg-slate-950/60 border-slate-800/50 opacity-75' 
                   : item.status === 'PARTIALLY_FULFILLED'
                   ? 'bg-slate-900 border-amber-500/30 shadow-sm'
                   : 'bg-slate-900 border-slate-800 shadow-sm'
@@ -205,7 +260,7 @@ export default function VendorPortal({
                     </span>
                   </div>
                   <div className="text-xs text-slate-400 mt-1">
-                    Rate: <strong className="text-emerald-400 font-semibold">₹{item.target_rate}/{item.unit}</strong> • Target: {item.required_qty} {item.unit}
+                    Pluckk Target: <strong className="text-emerald-400 font-semibold">₹{item.target_rate}/{item.unit}</strong> • Target Qty: {item.required_qty} {item.unit}
                   </div>
                 </div>
 
@@ -213,100 +268,152 @@ export default function VendorPortal({
                 <div>
                   {isFulfilled ? (
                     <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
-                      <Lock size={12} /> Requirement Closed
+                      <Lock size={12} /> Closed
                     </span>
                   ) : item.status === 'PARTIALLY_FULFILLED' ? (
                     <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                      {item.remaining_qty} {item.unit} Still Needed!
+                      {item.remaining_qty} {item.unit} Left
                     </span>
                   ) : (
                     <span className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                      {item.remaining_qty} {item.unit} Needed
+                      {item.remaining_qty} {item.unit} Open
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* My active allocation note */}
-              {myAlloc && (
-                <div className="mt-2.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 flex items-center justify-between">
-                  <span>You have committed: <strong>{myAlloc.quantity} {item.unit}</strong></span>
-                  <Check size={14} />
+              {/* My active bid status pill */}
+              {myBid && (
+                <div className={`mt-2.5 text-xs rounded-xl p-2.5 flex items-center justify-between border ${
+                  myBid.allocated_qty > 0
+                    ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+                    : 'bg-amber-950/40 border-amber-500/30 text-amber-300'
+                }`}>
+                  <div>
+                    <span className="font-bold">
+                      {myBid.allocated_qty > 0 
+                        ? `🟢 L1 Awarded: ${myBid.allocated_qty} ${item.unit} @ ₹${myBid.quoted_rate}/${item.unit}` 
+                        : `🔴 Currently Outbid @ ₹${myBid.quoted_rate}/${item.unit}`}
+                    </span>
+                    <span className="block text-[10px] opacity-75 mt-0.5">
+                      {myBid.allocated_qty > 0 
+                        ? `Approved by system at lowest price.` 
+                        : `Another supplier offered a lower rate or higher rating.`}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleStartQuote(item)}
+                    className="text-xs text-white underline font-semibold ml-2"
+                  >
+                    Revise Quote
+                  </button>
                 </div>
               )}
 
-              {/* Notification & Action Area */}
+              {/* Bidding / Action Area */}
               <div className="mt-3.5 pt-3 border-t border-slate-800/80">
-                {isFulfilled ? (
-                  <div className="text-xs text-slate-400 flex items-center gap-2 italic">
-                    <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
-                    <span>Demand fulfilled by another supplier. <strong>Do not procure stock.</strong></span>
+                {isSelected ? (
+                  <div className="space-y-3 bg-slate-800/50 p-3.5 rounded-2xl border border-slate-700/60">
+                    <div className="text-xs font-bold text-white flex items-center justify-between">
+                      <span>Submit Quote for {item.item_name}</span>
+                      <span className="text-slate-400 text-[11px]">Pluckk Target: ₹{item.target_rate}/{item.unit}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[11px] text-slate-300 block mb-1">
+                          Your Price per {item.unit} (₹):
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="1"
+                          placeholder="e.g. 25.00"
+                          value={quotedRate}
+                          onChange={(e) => setQuotedRate(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-slate-300 block mb-1">
+                          Quantity you can give ({item.unit}):
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={`e.g. ${item.remaining_qty || 50}`}
+                          value={quotedQty}
+                          onChange={(e) => setQuotedQty(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => setSelectedSku(null)}
+                        className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleBidSubmit(item.sku_code)}
+                        disabled={!quotedRate || !quotedQty || parseFloat(quotedRate) <= 0 || parseFloat(quotedQty) <= 0}
+                        className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl shadow-sm transition"
+                      >
+                        Submit Quote
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div>
-                    {isSelected ? (
-                      <div className="space-y-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700/60">
-                        <label className="text-xs font-semibold text-slate-300 block">
-                          Enter quantity you can supply (Max {item.remaining_qty} {item.unit}):
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="1"
-                            max={item.remaining_qty}
-                            placeholder={`e.g. ${Math.min(50, item.remaining_qty)}`}
-                            value={customQty}
-                            onChange={(e) => setCustomQty(e.target.value)}
-                            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                          />
-                          <button
-                            onClick={() => handleClaim(item.sku_code, customQty)}
-                            disabled={!customQty || parseFloat(customQty) <= 0 || parseFloat(customQty) > item.remaining_qty}
-                            className="px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg transition"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => setSelectedSku(null)}
-                            className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-white"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleClaim(item.sku_code, item.remaining_qty)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition shadow-sm active:scale-98"
-                        >
-                          <Check size={14} />
-                          <span>Supply Full ({item.remaining_qty} {item.unit})</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setSelectedSku(item.sku_code);
-                            setCustomQty(Math.floor(item.remaining_qty / 2).toString());
-                          }}
-                          className="py-2 px-3 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition"
-                        >
-                          Partial Qty
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => handleStartQuote(item)}
+                      className="flex-1 py-2 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition shadow-sm active:scale-98 flex items-center justify-center gap-1.5"
+                    >
+                      <Check size={14} />
+                      <span>{myBid ? 'Update Quote / Quantity' : 'Quote Price & Quantity'}</span>
+                    </button>
                   </div>
                 )}
               </div>
             </div>
           );
         })}
+
+        {/* Empty State: If vendor has no items in their catalog */}
+        {visibleItems.length === 0 && (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+            <Package size={36} className="mx-auto text-slate-600" />
+            <h4 className="text-sm font-bold text-white">No Matching Articles in your Catalogue</h4>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Your screen is set up to only show articles you supply. You currently have <strong>{mySuppliedSkus.length}</strong> articles selected in your catalogue.
+            </p>
+            <button
+              onClick={() => setIsCatalogModalOpen(true)}
+              className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm transition"
+            >
+              Open My Supply Catalogue
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 5:00 AM Shortage / Dropout Modal */}
+      {/* Modal: Vendor Supply Catalog */}
+      <VendorCatalogModal
+        isOpen={isCatalogModalOpen}
+        onClose={() => setIsCatalogModalOpen(false)}
+        vendor={currentVendor}
+        skuMaster={skuMaster}
+        onSaveCatalog={onSaveCatalog}
+      />
+
+      {/* Modal: Report Shortfall / Stock Release */}
       {backoutSku && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-red-500/40 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+          <div className="bg-slate-900 border border-red-500/40 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-xl">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5 text-red-400 font-bold">
                 <AlertTriangle size={20} />
