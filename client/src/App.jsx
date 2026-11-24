@@ -225,6 +225,26 @@ function MainApp() {
 
   const showToast = (message, severity = 'info') => {
     setToast({ message, severity, id: Date.now() });
+
+    // Native vibration on vendor mobile device
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (severity === 'critical' || severity === 'warning') {
+        navigator.vibrate([200, 100, 200]);
+      }
+    }
+
+    // Native push notification if vendor enabled alerts
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(severity === 'critical' ? '🚨 Pluckk Urgent Alert' : '🥬 Pluckk Procurement Update', {
+          body: message,
+          icon: '/favicon.svg'
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+
     setTimeout(() => {
       setToast(null);
     }, 4500);

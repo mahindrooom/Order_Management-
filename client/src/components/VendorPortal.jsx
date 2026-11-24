@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Package, Check, CheckCircle2, AlertCircle, Lock, 
   Send, AlertTriangle, ChevronDown, User, ShieldCheck, 
-  Clock, ArrowRight, CornerDownRight, X, TrendingDown, Star
+  Clock, ArrowRight, CornerDownRight, X, TrendingDown, Star,
+  Smartphone, Bell, Download
 } from 'lucide-react';
 import VendorCatalogModal from './VendorCatalogModal';
 
@@ -43,6 +44,52 @@ export default function VendorPortal({
   const [backoutSku, setBackoutSku] = useState(null);
   const [backoutDropQty, setBackoutDropQty] = useState('');
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+
+  // PWA Install Prompt & Notification Permissions
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+  });
+
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+    }
+    setInstallPrompt(null);
+  };
+
+  const handleEnableNotifications = async () => {
+    if ('Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setNotifPermission(perm);
+      if (perm === 'granted') {
+        new Notification('🔔 Pluckk Mandi Alerts Enabled', {
+          body: 'You will receive live sound and buzz alerts when new requirements are released!',
+          icon: '/favicon.svg'
+        });
+      }
+    }
+  };
 
   // Filter items: A vendor ONLY sees what is in their supply catalog!
   const mySuppliedSkus = Array.isArray(currentVendor?.supplied_skus) ? currentVendor.supplied_skus : [];
@@ -119,7 +166,60 @@ export default function VendorPortal({
   };
 
   return (
-    <div className={`space-y-5 ${compact ? 'max-w-md mx-auto' : 'max-w-2xl mx-auto'}`}>
+    <div className={`space-y-4 ${compact ? 'max-w-md mx-auto' : 'max-w-2xl mx-auto'}`}>
+      {/* 📲 PWA App Install Banner for Vendors */}
+      {!isInstalled && (
+        <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border border-emerald-500/40 rounded-3xl p-3.5 flex items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-white text-lg shadow-md shrink-0">
+              P
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Install Pluckk Supplier App</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-semibold uppercase">Mobile PWA</span>
+              </h4>
+              <p className="text-[11px] text-slate-300">
+                Add to your phone home screen for live mandi updates & buzz alerts.
+              </p>
+            </div>
+          </div>
+
+          {installPrompt ? (
+            <button
+              onClick={handleInstallClick}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm shrink-0 active:scale-95 flex items-center gap-1.5"
+            >
+              <Smartphone size={14} />
+              <span>Install App</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => alert("📱 To install on your phone:\n\n• Android (Chrome): Tap the 3 dots (⋮) in Chrome -> 'Install app' or 'Add to Home screen'.\n\n• iPhone (Safari): Tap the Share button (⎋) at the bottom -> 'Add to Home Screen' (➕).")}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-semibold transition shrink-0 border border-slate-700"
+            >
+              <span>Install Guide 📲</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Device Notifications Opt-In */}
+      {notifPermission !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
+        <div className="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-blue-300">
+            <Bell size={14} className="text-blue-400 shrink-0" />
+            <span className="text-[11px]">Turn on sound & vibration alerts for 12:30 AM indents & shortfall broadcasts</span>
+          </div>
+          <button
+            onClick={handleEnableNotifications}
+            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shrink-0"
+          >
+            Enable Alerts
+          </button>
+        </div>
+      )}
+
       {/* Mobile Top Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">

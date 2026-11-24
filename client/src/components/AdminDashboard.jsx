@@ -3,7 +3,7 @@ import {
   TrendingUp, AlertTriangle, CheckCircle2, Clock, 
   Send, RefreshCw, Upload, Download, Bell, ShieldAlert,
   Search, Filter, ChevronRight, UserCheck, XCircle, Database, Plus, Check,
-  Package, Star, Award, Layers, Users, Edit3, List, LayoutGrid, Phone, Mail, UserPlus, X, ShieldCheck
+  Package, Star, Award, Layers, Users, Edit3, List, LayoutGrid, Phone, Mail, UserPlus, X, ShieldCheck, MessageSquare
 } from 'lucide-react';
 import VendorCatalogModal from './VendorCatalogModal';
 
@@ -166,6 +166,22 @@ export default function AdminDashboard({
           >
             <Upload size={15} />
             <span>Upload Indent (CSV/JSON)</span>
+          </button>
+
+          {/* WhatsApp Live Alert Broadcast for Mandi Vendors */}
+          <button
+            onClick={() => {
+              const url = window.location.origin;
+              const text = encodeURIComponent(
+                `🥬 *PLUCCK MANDI INDENT RELEASED (12:30 AM)*\n\nDaily fresh produce requirements are now open for bidding on Pluckk Supplier Portal.\n\n👉 Open App & Submit Quote: ${url}\n\n_Note: You will only see articles mapped to your supply catalogue._`
+              );
+              window.open(`https://wa.me/?text=${text}`, '_blank');
+            }}
+            className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-xl transition shadow-sm"
+            title="Broadcast live indent announcement to suppliers on WhatsApp"
+          >
+            <MessageSquare size={15} />
+            <span>WhatsApp Mandi Alert</span>
           </button>
 
           <a
