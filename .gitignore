@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+client/node_modules/
+
+# Production build outputs
+client/dist/
+
+# Server uploads & temporary files
+server/uploads/
+*.log
+
+# Environment & OS files
+.DS_Store
+Thumbs.db
+.env
+.env.local
