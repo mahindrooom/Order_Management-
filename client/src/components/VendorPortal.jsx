@@ -547,7 +547,7 @@ export default function VendorPortal({
                             placeholder="e.g. 25.00"
                             value={quotedRate}
                             onChange={(e) => setQuotedRate(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 shadow-xs"
                           />
                         </div>
 
@@ -561,7 +561,7 @@ export default function VendorPortal({
                             placeholder={`e.g. ${item.remaining_qty || 50}`}
                             value={quotedQty}
                             onChange={(e) => setQuotedQty(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 shadow-xs"
                           />
                         </div>
                       </div>
@@ -704,7 +704,7 @@ export default function VendorPortal({
                                     value={fffQty}
                                     onChange={(e) => setFffQty(e.target.value)}
                                     placeholder={item.remaining_qty.toString()}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                    className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500 shadow-xs"
                                   />
                                 </div>
                                 <div>
@@ -718,7 +718,7 @@ export default function VendorPortal({
                                     value={fffRate}
                                     onChange={(e) => setFffRate(e.target.value)}
                                     placeholder={item.target_rate?.toString() || '25'}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                    className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500 shadow-xs"
                                   />
                                 </div>
                               </div>
@@ -726,7 +726,7 @@ export default function VendorPortal({
                               <div className="flex items-center justify-end gap-2 pt-1">
                                 <button
                                   onClick={() => setFffApplyingSku(null)}
-                                  className="px-2.5 py-1 text-[11px] text-slate-500 hover:text-white"
+                                  className="px-2.5 py-1 text-[11px] text-slate-500 hover:text-slate-800"
                                 >
                                   Cancel
                                 </button>
@@ -826,7 +826,7 @@ export default function VendorPortal({
                   required
                   value={backoutDropQty}
                   onChange={(e) => setBackoutDropQty(e.target.value)}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500"
+                  className="w-full bg-white border border-red-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-red-500 shadow-xs"
                 />
               </div>
 

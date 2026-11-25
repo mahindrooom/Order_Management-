@@ -1116,7 +1116,7 @@ export default function AdminDashboard({
                   placeholder="Search vendor, email, article..."
                   value={vendorSearchTerm}
                   onChange={(e) => setVendorSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
@@ -1432,7 +1432,7 @@ export default function AdminDashboard({
                       placeholder="e.g. Mahindroo Fresh Produce / Ramesh Mandi"
                       value={newVendor.name}
                       onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-xs"
                     />
                   </div>
 
@@ -1446,7 +1446,7 @@ export default function AdminDashboard({
                       placeholder="vendor@gmail.com or mandi@yahoo.com"
                       value={newVendor.email}
                       onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-xs"
                     />
                     <span className="text-[10px] text-slate-500 mt-0.5 block">
                       Non-pluckk emails automatically receive restricted 1-to-1 Supplier portal view.
@@ -1462,7 +1462,7 @@ export default function AdminDashboard({
                       placeholder="+91 98200 xxxxx"
                       value={newVendor.phone}
                       onChange={(e) => setNewVendor({ ...newVendor, phone: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-xs"
                     />
                   </div>
 
@@ -1549,7 +1549,7 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.quality}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, quality: e.target.value })}
-                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-emerald-600 shadow-xs"
                       />
                     </div>
 
@@ -1562,7 +1562,7 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.price}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, price: e.target.value })}
-                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-emerald-600 shadow-xs"
                       />
                     </div>
 
@@ -1575,7 +1575,7 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.fill_rate}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, fill_rate: e.target.value })}
-                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-emerald-600 shadow-xs"
                       />
                     </div>
 
@@ -1588,7 +1588,7 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.delivery_time}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, delivery_time: e.target.value })}
-                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-emerald-600 shadow-xs"
                       />
                     </div>
                   </div>
