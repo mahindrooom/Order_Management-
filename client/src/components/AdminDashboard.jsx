@@ -165,20 +165,20 @@ export default function AdminDashboard({
   return (
     <div className="space-y-6">
       {/* Top Banner / Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-5 rounded-3xl shadow-sm">
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs uppercase tracking-wider font-semibold text-emerald-400">
+            <span className="text-xs uppercase tracking-wider font-semibold text-emerald-600">
               {isAdmin ? '👑 Executive Admin Console' : '🛒 Sourcing Operations'}
             </span>
             <span className="text-xs text-slate-500">•</span>
-            <span className="text-xs text-slate-400">Pluckk Procurement & L1 Allocation Engine</span>
+            <span className="text-xs text-slate-500">Pluckk Procurement & L1 Allocation Engine</span>
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mt-1">
             {indent?.title || 'Daily Procurement Indent'}
           </h2>
-          <p className="text-xs text-slate-400 max-w-xl">
+          <p className="text-xs text-slate-500 max-w-xl">
             Automated minimum price (L1) allocation with vendor rating tie-breakers (Quality, Price, Fill Rate, Delivery Time).
           </p>
         </div>
@@ -201,7 +201,7 @@ export default function AdminDashboard({
               );
               window.open(`https://wa.me/?text=${text}`, '_blank');
             }}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-xl transition shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500 text-emerald-600 hover:text-white border border-emerald-500/30 rounded-xl transition shadow-sm"
             title="Broadcast live indent announcement to suppliers on WhatsApp"
           >
             <MessageSquare size={15} />
@@ -211,7 +211,7 @@ export default function AdminDashboard({
           <a
             href="/api/export-po"
             download
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-200 rounded-xl transition shadow-sm"
           >
             <Download size={15} />
             <span>Export Morning PO</span>
@@ -220,7 +220,7 @@ export default function AdminDashboard({
           {isAdmin && (
             <button
               onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl border border-slate-800 transition"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-700 text-slate-500 hover:text-white rounded-xl border border-slate-200 transition"
               title="Reset to default 12:30 AM sample"
             >
               <RefreshCw size={14} />
@@ -233,34 +233,34 @@ export default function AdminDashboard({
       {/* ⏰ 5:00 AM Bidding Window Command & Control Bar */}
       <div className={`p-4 sm:p-5 rounded-3xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm ${
         indent?.bidding_window?.status === 'LOCKED'
-          ? 'bg-slate-900 border-amber-500/40 text-amber-200'
-          : 'bg-slate-900 border-emerald-500/40 text-emerald-200'
+          ? 'bg-white border-amber-500/40 text-amber-200'
+          : 'bg-white border-emerald-500/40 text-emerald-200'
       }`}>
         <div className="flex items-center gap-3">
           <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 ${
             indent?.bidding_window?.status === 'LOCKED'
-              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              ? 'bg-amber-500/20 text-amber-600 border border-amber-500/30'
+              : 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30'
           }`}>
             <Clock size={22} />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">
+              <span className="text-sm font-bold text-slate-900">
                 {indent?.bidding_window?.status === 'LOCKED' 
                   ? '🔒 5:00 AM Bidding Window: CLOSED & LOCKED' 
                   : '🟢 5:00 AM Bidding Window: OPEN (Awaiting 5:00 AM)'}
               </span>
               <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
                 indent?.bidding_window?.status === 'LOCKED'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200 animate-pulse'
               }`}>
                 {indent?.bidding_window?.status === 'LOCKED' ? 'Bids Locked' : 'Suppliers Can Adjust Quotes'}
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-700 mt-0.5">
               {indent?.bidding_window?.status === 'LOCKED'
                 ? 'System evaluated all submitted quotes and locked allocations at 5:00 AM based on minimum price (L1) and vendor ratings.'
                 : 'Suppliers are submitting and adjusting quotes. System will wait till 5:00 AM to accept lowest pricing and lock allocations.'}
@@ -272,7 +272,7 @@ export default function AdminDashboard({
           {indent?.bidding_window?.status === 'LOCKED' ? (
             <button
               onClick={onReopenBiddingWindow}
-              className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition border border-slate-700 shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-700 text-slate-800 rounded-xl text-xs font-bold transition border border-slate-200 shadow-sm"
               title="Reopen window so suppliers can quote or adjust prices again"
             >
               <RefreshCw size={14} />
@@ -294,20 +294,20 @@ export default function AdminDashboard({
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Fill Rate KPI */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="bg-white border border-slate-200 p-5 rounded-3xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Live Fill Rate</span>
-            <TrendingUp size={18} className="text-emerald-400" />
+            <TrendingUp size={18} className="text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">
+            <span className="text-3xl font-extrabold text-slate-900">
               {summary.fill_rate_pct}%
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500">
               ({summary.total_allocated_kg} / {summary.total_demand_kg} kg)
             </span>
           </div>
-          <div className="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
             <div 
               className={`h-full transition-all duration-500 rounded-full ${
                 summary.fill_rate_pct >= 90 ? 'bg-emerald-500' :
@@ -319,16 +319,16 @@ export default function AdminDashboard({
         </div>
 
         {/* Shortfall Risk KPI */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="bg-white border border-slate-200 p-5 rounded-3xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Unfulfilled Shortfall</span>
-            <AlertTriangle size={18} className={summary.total_remaining_kg > 0 ? 'text-amber-400' : 'text-slate-600'} />
+            <AlertTriangle size={18} className={summary.total_remaining_kg > 0 ? 'text-amber-600' : 'text-slate-600'} />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className={`text-3xl font-extrabold ${summary.total_remaining_kg > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`text-3xl font-extrabold ${summary.total_remaining_kg > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
               {summary.total_remaining_kg} <span className="text-lg font-normal">kg</span>
             </span>
-            <span className="text-xs text-slate-400">open demand</span>
+            <span className="text-xs text-slate-500">open demand</span>
           </div>
           <p className="text-xs text-slate-500 mt-3 flex items-center gap-1.5">
             <Clock size={12} />
@@ -337,17 +337,17 @@ export default function AdminDashboard({
         </div>
 
         {/* Total Estimated Cost */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="bg-white border border-slate-200 p-5 rounded-3xl">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Committed PO Value</span>
-            <Award size={18} className="text-emerald-400" />
+            <Award size={18} className="text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">
+            <span className="text-3xl font-extrabold text-slate-900">
               ₹{(summary.total_estimated_cost || 0).toLocaleString()}
             </span>
           </div>
-          <p className="text-xs text-emerald-400 mt-3">
+          <p className="text-xs text-emerald-600 mt-3">
             Optimized via Lowest Price (L1) Engine
           </p>
         </div>
@@ -355,35 +355,35 @@ export default function AdminDashboard({
         {/* Registered Suppliers (Clickable to switch tab) */}
         <div 
           onClick={() => setActiveSubTab('vendors')}
-          className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 p-5 rounded-3xl cursor-pointer transition group shadow-sm"
+          className="bg-white border border-slate-200 hover:border-emerald-500/50 p-5 rounded-3xl cursor-pointer transition group shadow-sm"
           title="Click to view full Vendors Directory"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider group-hover:text-emerald-400 transition">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider group-hover:text-emerald-600 transition">
               Active Suppliers (Click to View)
             </span>
-            <Users size={18} className="text-teal-400 group-hover:scale-110 transition" />
+            <Users size={18} className="text-teal-600 group-hover:scale-110 transition" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">
+            <span className="text-3xl font-extrabold text-slate-900">
               {vendors.length}
             </span>
-            <span className="text-xs text-slate-400">mapped with catalogues</span>
+            <span className="text-xs text-slate-500">mapped with catalogues</span>
           </div>
-          <p className="text-xs text-emerald-400 mt-3 flex items-center gap-1 font-medium">
+          <p className="text-xs text-emerald-600 mt-3 flex items-center gap-1 font-medium">
             <span>View All Suppliers & Catalogues →</span>
           </p>
         </div>
       </div>
 
       {/* Sub Tabs: Indent Bidding vs Suppliers Catalog & Ratings vs SKU Master */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveSubTab('indent')}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
             activeSubTab === 'indent'
               ? 'bg-emerald-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+              : 'text-slate-500 hover:text-white bg-white border border-slate-200'
           }`}
         >
           <Layers size={14} />
@@ -398,17 +398,17 @@ export default function AdminDashboard({
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
             activeSubTab === 'fastest_finger'
               ? 'bg-amber-600 text-white shadow-sm'
-              : 'text-amber-300 hover:text-white bg-amber-950/20 border border-amber-500/30'
+              : 'text-amber-300 hover:text-white bg-amber-50 border border-amber-500/30'
           }`}
         >
-          <Zap size={14} className={pendingFffCount > 0 ? 'animate-bounce text-amber-300' : 'text-amber-400'} />
+          <Zap size={14} className={pendingFffCount > 0 ? 'animate-bounce text-amber-300' : 'text-amber-600'} />
           <span>⚡ 5 AM Shortfalls & Fastest Finger (Round 2)</span>
           {pendingFffCount > 0 ? (
             <span className="px-2 py-0.5 bg-red-600 text-white animate-pulse rounded-full text-[10px] font-bold">
               {pendingFffCount} Pending Review
             </span>
           ) : unfulfilledItems.length > 0 ? (
-            <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-[10px]">
+            <span className="px-1.5 py-0.2 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[10px]">
               {unfulfilledItems.length} Shortfalls
             </span>
           ) : (
@@ -423,12 +423,12 @@ export default function AdminDashboard({
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
             activeSubTab === 'vendors'
               ? 'bg-emerald-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+              : 'text-slate-500 hover:text-white bg-white border border-slate-200'
           }`}
         >
           <Users size={14} />
           <span>Vendors Directory & Catalogues</span>
-          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[10px] font-bold">
+          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold">
             {vendors.length} Vendors
           </span>
         </button>
@@ -439,7 +439,7 @@ export default function AdminDashboard({
             className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeSubTab === 'sku_master'
                 ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                : 'text-slate-500 hover:text-white bg-white border border-slate-200'
             }`}
           >
             <Database size={14} />
@@ -457,7 +457,7 @@ export default function AdminDashboard({
           {/* Real-Time Shortfall & Release Watchdog Banner */}
           <div className="bg-gradient-to-r from-amber-950/40 via-red-950/20 to-slate-900 border border-amber-800/40 rounded-3xl p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+              <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
                 <ShieldAlert size={22} />
               </div>
               <div>
@@ -467,7 +467,7 @@ export default function AdminDashboard({
                     Continuous
                   </span>
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-2xl">
+                <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
                   Whenever any supplier releases stock, cancels, or reports a shortfall at any time, the L1 engine automatically recalculates and awards to the next-lowest supplier or opens remaining demand.
                 </p>
               </div>
@@ -491,12 +491,12 @@ export default function AdminDashboard({
                 placeholder="Search article name (e.g. Potato, Onion, Tomato)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9.5 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9.5 pr-4 py-2 bg-white border border-slate-200 rounded-2xl text-xs text-slate-800 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-              <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-2xl p-1 text-xs">
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl p-1 text-xs">
                 {['ALL', 'OPEN', 'PARTIALLY_FULFILLED', 'FULFILLED'].map((st) => (
                   <button
                     key={st}
@@ -504,7 +504,7 @@ export default function AdminDashboard({
                     className={`px-2.5 py-1 rounded-xl font-medium transition ${
                       filterStatus === st 
                         ? 'bg-emerald-600 text-white shadow-sm' 
-                        : 'text-slate-400 hover:text-slate-200'
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     {st === 'ALL' ? 'All' : st === 'PARTIALLY_FULFILLED' ? 'Partial' : st === 'FULFILLED' ? 'Closed' : 'Open'}
@@ -512,7 +512,7 @@ export default function AdminDashboard({
                 ))}
               </div>
 
-              <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-2xl p-1 text-xs">
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl p-1 text-xs">
                 {categories.map((cat) => (
                   <button
                     key={cat}
@@ -520,7 +520,7 @@ export default function AdminDashboard({
                     className={`px-2.5 py-1 rounded-xl font-medium transition ${
                       filterCategory === cat 
                         ? 'bg-slate-700 text-white' 
-                        : 'text-slate-400 hover:text-slate-200'
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     {cat}
@@ -531,11 +531,11 @@ export default function AdminDashboard({
           </div>
 
           {/* Main Indent Articles Matrix */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                     <th className="py-3 px-4">Article / SKU</th>
                     <th className="py-3 px-3">Target Rate</th>
                     <th className="py-3 px-3">Avg Procured</th>
@@ -546,32 +546,32 @@ export default function AdminDashboard({
                     <th className="py-3 px-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-sm">
+                <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredItems.map((item) => {
                     const pct = Math.round((item.allocated_qty / item.required_qty) * 100);
                     const isFull = item.status === 'FULFILLED';
                     const isPartial = item.status === 'PARTIALLY_FULFILLED';
 
                     return (
-                      <tr key={item.sku_code} className="hover:bg-slate-800/30 transition">
+                      <tr key={item.sku_code} className="hover:bg-slate-100 transition">
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-white">{item.item_name}</div>
+                          <div className="font-semibold text-slate-900">{item.item_name}</div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[11px] font-mono text-slate-500">{item.sku_code}</span>
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500">
                               {item.category}
                             </span>
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-3 text-slate-300 font-medium">
+                        <td className="py-3.5 px-3 text-slate-700 font-medium">
                           ₹{item.target_rate?.toFixed(2)}
                           <span className="text-[10px] text-slate-500">/{item.unit}</span>
                         </td>
 
                         <td className="py-3.5 px-3">
                           {item.avg_procured_rate > 0 ? (
-                            <span className="text-xs font-bold text-emerald-400">
+                            <span className="text-xs font-bold text-emerald-600">
                               ₹{item.avg_procured_rate}
                               <span className="text-[10px] text-slate-500">/{item.unit}</span>
                             </span>
@@ -580,30 +580,30 @@ export default function AdminDashboard({
                           )}
                         </td>
 
-                        <td className="py-3.5 px-3 font-semibold text-white">
-                          {item.required_qty} <span className="text-xs text-slate-400 font-normal">{item.unit}</span>
+                        <td className="py-3.5 px-3 font-semibold text-slate-900">
+                          {item.required_qty} <span className="text-xs text-slate-500 font-normal">{item.unit}</span>
                         </td>
 
                         <td className="py-3.5 px-4">
                           <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="text-slate-400 font-medium">
+                            <span className="text-slate-500 font-medium">
                               {item.allocated_qty} {item.unit} ({pct}%)
                             </span>
                             {isFull ? (
-                              <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                                 <CheckCircle2 size={12} /> Fulfilled
                               </span>
                             ) : isPartial ? (
-                              <span className="text-[11px] text-amber-400 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                              <span className="text-[11px] text-amber-600 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                                 {item.remaining_qty} {item.unit} Left
                               </span>
                             ) : (
-                              <span className="text-[11px] text-slate-400 font-medium bg-slate-800 px-2 py-0.5 rounded-full">
+                              <span className="text-[11px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
                                 Open
                               </span>
                             )}
                           </div>
-                          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                             <div 
                               className={`h-full transition-all duration-300 rounded-full ${
                                 isFull ? 'bg-emerald-500' :
@@ -616,12 +616,12 @@ export default function AdminDashboard({
 
                         <td className="py-3.5 px-3">
                           {item.remaining_qty === 0 ? (
-                            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                            <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                               <CheckCircle2 size={13} /> Closed
                             </span>
                           ) : (
-                            <span className="text-sm font-bold text-amber-400">
-                              {item.remaining_qty} <span className="text-xs font-normal text-slate-400">{item.unit}</span>
+                            <span className="text-sm font-bold text-amber-600">
+                              {item.remaining_qty} <span className="text-xs font-normal text-slate-500">{item.unit}</span>
                             </span>
                           )}
                         </td>
@@ -635,24 +635,24 @@ export default function AdminDashboard({
                                   key={b.id}
                                   className={`text-xs px-2.5 py-1 rounded-xl border flex items-center justify-between gap-2 ${
                                     b.status === 'BACKED_OUT'
-                                      ? 'bg-red-500/10 text-red-400 border-red-500/30 line-through'
+                                      ? 'bg-red-500/10 text-red-600 border-red-500/30 line-through'
                                       : b.allocated_qty > 0
-                                      ? 'bg-emerald-950/40 text-emerald-200 border-emerald-500/30'
-                                      : 'bg-slate-800/80 text-slate-400 border-slate-700'
+                                      ? 'bg-emerald-50 text-emerald-200 border-emerald-500/30'
+                                      : 'bg-slate-100 text-slate-500 border-slate-200'
                                   }`}
                                 >
                                   <div>
-                                    <span className="font-semibold text-white">{b.vendor_name.split(' ')[0]}</span>
-                                    <span className="text-[11px] text-slate-400 ml-1">quoted ₹{b.quoted_rate}</span>
+                                    <span className="font-semibold text-slate-900">{b.vendor_name.split(' ')[0]}</span>
+                                    <span className="text-[11px] text-slate-500 ml-1">quoted ₹{b.quoted_rate}</span>
                                   </div>
 
                                   <div>
                                     {b.allocated_qty > 0 ? (
-                                      <span className="font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded text-[11px]">
+                                      <span className="font-bold text-emerald-600 bg-emerald-500/20 px-1.5 py-0.2 rounded text-[11px]">
                                         Awarded {b.allocated_qty} {item.unit}
                                       </span>
                                     ) : (
-                                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded">
+                                      <span className="text-[10px] text-amber-600 bg-amber-500/10 px-1.5 py-0.2 rounded">
                                         Outbid
                                       </span>
                                     )}
@@ -669,7 +669,7 @@ export default function AdminDashboard({
                           {item.remaining_qty > 0 && (
                             <button
                               onClick={() => onBroadcastSOS(item.sku_code)}
-                              className="px-2.5 py-1 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl transition"
+                              className="px-2.5 py-1 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/30 rounded-xl transition"
                               title="Broadcast urgent SOS to suppliers"
                             >
                               Send SOS
@@ -692,19 +692,19 @@ export default function AdminDashboard({
           {/* Executive Round 2 Banner */}
           <div className="bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border border-amber-500/40 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-600 border border-amber-500/30 flex items-center justify-center shrink-0">
                 <Zap size={24} className="animate-pulse" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span>5:00 AM Shortfall Resolution & Fastest Finger First (Round 2)</span>
                   </h3>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
                     Round 2 Live
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                <p className="text-xs text-slate-700 mt-1 max-w-2xl leading-relaxed">
                   As the clock hits 5:00 AM, primary lowest-price (L1) bids are locked. Unfulfilled items below can be re-initiated for <strong>Fastest Finger First</strong>. Any supplier who applies first appears in Chart 2 with millisecond precision for instant <strong>Accept</strong> or <strong>Reject</strong>.
                 </p>
               </div>
@@ -725,41 +725,41 @@ export default function AdminDashboard({
 
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Indent Articles</span>
-              <span className="text-2xl font-black text-white mt-1 block">{(indent?.items || []).length}</span>
+            <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total Indent Articles</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">{(indent?.items || []).length}</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block">Fulfilled at 5:00 AM</span>
-              <span className="text-2xl font-black text-emerald-400 mt-1 block">{fulfilledItems.length} articles</span>
+            <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider block">Fulfilled at 5:00 AM</span>
+              <span className="text-2xl font-black text-emerald-600 mt-1 block">{fulfilledItems.length} articles</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-              <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block">Unfulfilled Shortfalls</span>
-              <span className="text-2xl font-black text-amber-400 mt-1 block">{unfulfilledItems.length} articles</span>
+            <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-amber-600 uppercase tracking-wider block">Unfulfilled Shortfalls</span>
+              <span className="text-2xl font-black text-amber-600 mt-1 block">{unfulfilledItems.length} articles</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-              <span className="text-[11px] font-semibold text-cyan-400 uppercase tracking-wider block">Live FFF Queue</span>
-              <span className="text-2xl font-black text-cyan-400 mt-1 block">{allFffApplications.length} applications</span>
+            <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-teal-600 uppercase tracking-wider block">Live FFF Queue</span>
+              <span className="text-2xl font-black text-teal-600 mt-1 block">{allFffApplications.length} applications</span>
             </div>
           </div>
 
           {/* CHART 1: 5 AM Fulfillment & Shortfall Re-initiation Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm space-y-4 p-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm space-y-4 p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <span>📊 Chart 1: 5 AM Fulfillment Status & Shortfall List</span>
-                  <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">
+                  <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
                     Primary 5 AM Allocations
                   </span>
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Shows fulfilled articles vs remaining shortfall needed. Click "Re-initiate Bid" to reopen the fastest finger window for any item.
                 </p>
               </div>
 
               {/* Status Filter Pills */}
-              <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
                 {['ALL', 'SHORTFALLS', 'ACTIVE_FFF', 'FULFILLED'].map((f) => (
                   <button
                     key={f}
@@ -767,7 +767,7 @@ export default function AdminDashboard({
                     className={`px-3 py-1 rounded-lg font-semibold transition ${
                       fffTabFilter === f
                         ? 'bg-amber-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-slate-500 hover:text-white'
                     }`}
                   >
                     {f === 'ALL' ? 'All Articles' : f === 'SHORTFALLS' ? `Shortfalls (${unfulfilledItems.length})` : f === 'ACTIVE_FFF' ? `Active FFF (${activeFffItems.length})` : `100% Fulfilled (${fulfilledItems.length})`}
@@ -780,7 +780,7 @@ export default function AdminDashboard({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                  <tr className="border-b border-slate-200 bg-white text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
                     <th className="py-3 px-3">Article & SKU</th>
                     <th className="py-3 px-3">Category</th>
                     <th className="py-3 px-3 text-right">Target Demand</th>
@@ -791,7 +791,7 @@ export default function AdminDashboard({
                     <th className="py-3 px-3 text-right">Fastest Finger Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100">
                   {(indent?.items || [])
                     .filter(item => {
                       if (fffTabFilter === 'SHORTFALLS') return item.remaining_qty > 0;
@@ -805,47 +805,47 @@ export default function AdminDashboard({
                       const fffApps = item.round2_fff?.applications || [];
 
                       return (
-                        <tr key={item.sku_code} className="hover:bg-slate-800/40 transition">
+                        <tr key={item.sku_code} className="hover:bg-slate-100 transition">
                           <td className="py-3.5 px-3">
-                            <span className="font-bold text-white text-sm block">{item.item_name}</span>
+                            <span className="font-bold text-slate-900 text-sm block">{item.item_name}</span>
                             <span className="text-[11px] text-slate-500 font-mono">{item.sku_code}</span>
                           </td>
                           <td className="py-3.5 px-3">
-                            <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
                               {item.category}
                             </span>
                           </td>
-                          <td className="py-3.5 px-3 text-right font-medium text-slate-300">
+                          <td className="py-3.5 px-3 text-right font-medium text-slate-700">
                             {item.required_qty} {item.unit}
                           </td>
-                          <td className="py-3.5 px-3 text-right font-bold text-emerald-400">
+                          <td className="py-3.5 px-3 text-right font-bold text-emerald-600">
                             {item.allocated_qty || 0} {item.unit}
                           </td>
                           <td className="py-3.5 px-3 text-right">
                             {isFulfilled ? (
-                              <span className="text-emerald-400 font-semibold flex items-center justify-end gap-1">
+                              <span className="text-emerald-600 font-semibold flex items-center justify-end gap-1">
                                 <CheckCircle2 size={13} /> Fulfilled
                               </span>
                             ) : (
-                              <span className="text-red-400 font-bold bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-lg">
+                              <span className="text-red-600 font-bold bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-lg">
                                 {item.remaining_qty} {item.unit} Shortfall
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-3 text-right font-mono font-medium text-slate-300">
+                          <td className="py-3.5 px-3 text-right font-mono font-medium text-slate-700">
                             ₹{item.target_rate}/{item.unit}
                           </td>
                           <td className="py-3.5 px-3 text-center">
                             {isFulfilled ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 100% Closed
                               </span>
                             ) : isFffActive ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
                                 ⚡ FFF ACTIVE ({fffApps.length} in queue)
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
                                 Idle (Waiting Sourcing)
                               </span>
                             )}
@@ -880,23 +880,23 @@ export default function AdminDashboard({
           </div>
 
           {/* CHART 2: Live Fastest Finger First (FFF) Applications Queue */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm space-y-4 p-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm space-y-4 p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <span>⚡ Chart 2: Live Fastest Finger First (FFF) Applications Queue</span>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
                     Real-Time Arrival Order (Fastest First)
                   </span>
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Ordered strictly by arrival timestamp with millisecond accuracy. Sourcing & Admin can immediately <strong>Accept</strong> to lock allocation or <strong>Reject</strong> to pass to the next fastest applicant.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400">Total Applications:</span>
-                <span className="font-bold text-white bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700">
+                <span className="text-slate-500">Total Applications:</span>
+                <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
                   {allFffApplications.length}
                 </span>
                 {pendingFffCount > 0 && (
@@ -908,12 +908,12 @@ export default function AdminDashboard({
             </div>
 
             {allFffApplications.length === 0 ? (
-              <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-10 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center mx-auto">
                   <Clock size={24} />
                 </div>
-                <h5 className="text-sm font-bold text-white">No Fastest Finger Applications Yet</h5>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                <h5 className="text-sm font-bold text-slate-900">No Fastest Finger Applications Yet</h5>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
                   When you re-initiate shortfalls above, registered suppliers receive emergency alerts and apply. The first supplier to apply appears here immediately at the top of the queue.
                 </p>
                 {unfulfilledItems.length > 0 && (
@@ -929,7 +929,7 @@ export default function AdminDashboard({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                    <tr className="border-b border-slate-200 bg-white text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
                       <th className="py-3 px-3">Queue Rank</th>
                       <th className="py-3 px-3">Arrival Timestamp</th>
                       <th className="py-3 px-3">Article / SKU</th>
@@ -940,7 +940,7 @@ export default function AdminDashboard({
                       <th className="py-3 px-3 text-right">Sourcing Decision Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {allFffApplications.map((app, index) => {
                       const isPending = app.status === 'PENDING_APPROVAL';
                       const isAccepted = app.status === 'ACCEPTED';
@@ -952,8 +952,8 @@ export default function AdminDashboard({
                           key={app.id || index} 
                           className={`transition ${
                             isFastest && isPending 
-                              ? 'bg-amber-950/20 hover:bg-amber-950/30' 
-                              : 'hover:bg-slate-800/40'
+                              ? 'bg-amber-50 hover:bg-amber-50' 
+                              : 'hover:bg-slate-100'
                           }`}
                         >
                           {/* Queue Rank */}
@@ -966,12 +966,12 @@ export default function AdminDashboard({
                                   ? 'bg-slate-300 text-slate-900' 
                                   : index === 2 
                                   ? 'bg-amber-700 text-white' 
-                                  : 'bg-slate-800 text-slate-400'
+                                  : 'bg-slate-100 text-slate-500'
                               }`}>
                                 #{index + 1}
                               </span>
                               {index === 0 && (
-                                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                                   FASTEST
                                 </span>
                               )}
@@ -983,25 +983,25 @@ export default function AdminDashboard({
                             <span className="font-mono text-xs text-white font-semibold block">
                               {app.received_time || (app.timestamp ? new Date(app.timestamp).toLocaleTimeString() : 'Just now')}
                             </span>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-slate-500">
                               {app.timestamp ? new Date(app.timestamp).toLocaleDateString() : ''}
                             </span>
                           </td>
 
                           {/* Article */}
                           <td className="py-3.5 px-3">
-                            <span className="font-bold text-white text-sm block">{app.item_name}</span>
+                            <span className="font-bold text-slate-900 text-sm block">{app.item_name}</span>
                             <span className="text-[10px] font-mono text-slate-500">{app.sku_code}</span>
                           </td>
 
                           {/* Supplier */}
                           <td className="py-3.5 px-3">
-                            <span className="font-semibold text-slate-200 block">{app.vendor_name}</span>
+                            <span className="font-semibold text-slate-800 block">{app.vendor_name}</span>
                             <span className="text-[10px] text-slate-500 font-mono">ID: {app.vendor_id}</span>
                           </td>
 
                           {/* Offered Qty */}
-                          <td className="py-3.5 px-3 text-right font-bold text-white text-sm">
+                          <td className="py-3.5 px-3 text-right font-bold text-slate-900 text-sm">
                             {app.quantity} {app.unit}
                             <span className="block text-[10px] text-slate-500 font-normal">
                               (Shortfall: {app.remaining_qty} {app.unit})
@@ -1010,7 +1010,7 @@ export default function AdminDashboard({
 
                           {/* Quoted Rate */}
                           <td className="py-3.5 px-3 text-right">
-                            <span className="font-mono font-bold text-emerald-400 text-sm block">
+                            <span className="font-mono font-bold text-emerald-600 text-sm block">
                               ₹{app.quoted_rate}/{app.unit}
                             </span>
                             <span className="text-[10px] text-slate-500">
@@ -1021,17 +1021,17 @@ export default function AdminDashboard({
                           {/* Status */}
                           <td className="py-3.5 px-3 text-center">
                             {isPending && (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
                                 ⏳ Pending Approval
                               </span>
                             )}
                             {isAccepted && (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                                 ✅ Accepted ({app.allocated_qty || app.quantity} {app.unit})
                               </span>
                             )}
                             {isRejected && (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
                                 ❌ Rejected
                               </span>
                             )}
@@ -1051,7 +1051,7 @@ export default function AdminDashboard({
                                 </button>
                                 <button
                                   onClick={() => onReviewFFF && onReviewFFF(app.sku_code, app.id, 'REJECT')}
-                                  className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-semibold rounded-xl text-xs transition active:scale-95 flex items-center gap-1"
+                                  className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/30 font-semibold rounded-xl text-xs transition active:scale-95 flex items-center gap-1"
                                   title="Reject application and allow next fastest applicant"
                                 >
                                   <X size={13} />
@@ -1060,7 +1060,7 @@ export default function AdminDashboard({
                               </div>
                             ) : isAccepted ? (
                               <div className="text-right">
-                                <span className="text-[11px] font-semibold text-emerald-400 block">
+                                <span className="text-[11px] font-semibold text-emerald-600 block">
                                   Allocated by {app.reviewed_by || 'Sourcing'}
                                 </span>
                                 <span className="text-[10px] text-slate-500">
@@ -1069,7 +1069,7 @@ export default function AdminDashboard({
                               </div>
                             ) : (
                               <div className="text-right">
-                                <span className="text-[11px] font-semibold text-red-400 block">
+                                <span className="text-[11px] font-semibold text-red-600 block">
                                   Rejected by {app.reviewed_by || 'Sourcing'}
                                 </span>
                                 <span className="text-[10px] text-slate-500">
@@ -1093,16 +1093,16 @@ export default function AdminDashboard({
       {activeSubTab === 'vendors' && (
         <div className="space-y-4">
           {/* Header Controls: Title, Search, View Switcher, Add Vendor */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-3xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-3xl">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Users size={16} className="text-emerald-400" />
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Users size={16} className="text-emerald-600" />
                 <span>Registered Suppliers & Mandi Directory</span>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">
                   {filteredVendors.length} of {vendors.length} Vendors
                 </span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 All suppliers verified for Pluckk procurement. Indents are distributed based on what each vendor supplies.
               </p>
             </div>
@@ -1116,18 +1116,18 @@ export default function AdminDashboard({
                   placeholder="Search vendor, email, article..."
                   value={vendorSearchTerm}
                   onChange={(e) => setVendorSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
                 />
               </div>
 
               {/* View Mode Toggle (Table / List vs Cards) */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-200">
                 <button
                   onClick={() => setVendorViewMode('table')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                     vendorViewMode === 'table'
                       ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-slate-500 hover:text-white'
                   }`}
                   title="List / Table View"
                 >
@@ -1139,7 +1139,7 @@ export default function AdminDashboard({
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                     vendorViewMode === 'cards'
                       ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-slate-500 hover:text-white'
                   }`}
                   title="Cards Grid View"
                 >
@@ -1161,11 +1161,11 @@ export default function AdminDashboard({
 
           {/* VIEW 1: Table / List View (Clean Data List of all Vendors) */}
           {vendorViewMode === 'table' && (
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                    <tr className="border-b border-slate-200 bg-white text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
                       <th className="py-3.5 px-4">Supplier & ID</th>
                       <th className="py-3.5 px-4">Contact Info</th>
                       <th className="py-3.5 px-4">Supply Catalogue</th>
@@ -1177,34 +1177,34 @@ export default function AdminDashboard({
                       <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredVendors.map((v) => {
                       const ratings = v.ratings || { quality: 4.5, price: 4.5, fill_rate: 4.5, delivery_time: 4.5 };
                       const composite = v.compositeRating || 4.5;
                       const suppliedCount = (v.supplied_skus || []).length;
 
                       return (
-                        <tr key={v.id} className="hover:bg-slate-800/40 transition">
+                        <tr key={v.id} className="hover:bg-slate-100 transition">
                           {/* Supplier Name & Badge */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-white text-sm flex items-center gap-1.5">
+                            <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                               <span>{v.name}</span>
-                              <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">
+                              <span className="text-[10px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.2 rounded border border-slate-200">
                                 {v.id}
                               </span>
                             </div>
-                            <span className="inline-block mt-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.2 rounded-md font-medium">
+                            <span className="inline-block mt-0.5 text-[10px] text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.2 rounded-md font-medium">
                               ✓ 1-to-1 Verified
                             </span>
                           </td>
 
                           {/* Contact Info */}
                           <td className="py-3.5 px-4">
-                            <div className="text-slate-300 font-mono text-xs flex items-center gap-1">
+                            <div className="text-slate-700 font-mono text-xs flex items-center gap-1">
                               <Mail size={12} className="text-slate-500 shrink-0" />
                               <span className="truncate max-w-[180px]">{v.email}</span>
                             </div>
-                            <div className="text-slate-400 text-[11px] mt-0.5 flex items-center gap-1 font-mono">
+                            <div className="text-slate-500 text-[11px] mt-0.5 flex items-center gap-1 font-mono">
                               <Phone size={11} className="text-slate-500 shrink-0" />
                               <span>{v.phone || '+91 98xxx xxxxx'}</span>
                             </div>
@@ -1213,20 +1213,20 @@ export default function AdminDashboard({
                           {/* Supply Catalogue */}
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-1.5 mb-1">
-                              <Package size={13} className="text-emerald-400 shrink-0" />
-                              <span className="font-semibold text-slate-200">{suppliedCount} articles</span>
+                              <Package size={13} className="text-emerald-600 shrink-0" />
+                              <span className="font-semibold text-slate-800">{suppliedCount} articles</span>
                             </div>
                             <div className="flex flex-wrap gap-1 max-w-xs">
                               {(v.supplied_skus || []).slice(0, 3).map((code) => {
                                 const item = skuMaster.find(s => s.sku_code === code);
                                 return (
-                                  <span key={code} className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">
+                                  <span key={code} className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
                                     {item ? item.item_name.split(' ')[0] : code}
                                   </span>
                                 );
                               })}
                               {suppliedCount > 3 && (
-                                <span className="text-[10px] text-slate-400 bg-slate-800/60 px-1 py-0.5 rounded">
+                                <span className="text-[10px] text-slate-500 bg-slate-100 px-1 py-0.5 rounded">
                                   +{suppliedCount - 3} more
                                 </span>
                               )}
@@ -1237,23 +1237,23 @@ export default function AdminDashboard({
                           </td>
 
                           {/* 4 Pillars */}
-                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
                             ★{ratings.quality}
                           </td>
-                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
                             ★{ratings.price}
                           </td>
-                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
                             ★{ratings.fill_rate}
                           </td>
-                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-300">
+                          <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
                             ★{ratings.delivery_time}
                           </td>
 
                           {/* Composite Rating */}
                           <td className="py-3.5 px-4 text-center">
-                            <span className="inline-flex items-center gap-1 font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-xl">
-                              <Star size={12} className="fill-amber-400 text-amber-400" />
+                            <span className="inline-flex items-center gap-1 font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-xl">
+                              <Star size={12} className="fill-amber-400 text-amber-600" />
                               <span>{composite}</span>
                             </span>
                           </td>
@@ -1273,10 +1273,10 @@ export default function AdminDashboard({
                               {isAdmin && (
                                 <button
                                   onClick={() => handleOpenRatingsModal(v)}
-                                  className="px-2.5 py-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition flex items-center gap-1"
+                                  className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-lg border border-slate-200 transition flex items-center gap-1"
                                   title="Adjust 4-Pillar Ratings"
                                 >
-                                  <Star size={12} className="text-amber-400" />
+                                  <Star size={12} className="text-amber-600" />
                                   <span>Ratings</span>
                                 </button>
                               )}
@@ -1288,7 +1288,7 @@ export default function AdminDashboard({
 
                     {filteredVendors.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="py-12 text-center text-slate-400">
+                        <td colSpan={9} className="py-12 text-center text-slate-500">
                           <Users size={32} className="mx-auto text-slate-600 mb-2" />
                           <p className="text-sm font-semibold">No suppliers found matching "{vendorSearchTerm}"</p>
                           <p className="text-xs text-slate-500 mt-1">Try a different name, email, or click "+ Onboard Vendor" to register them.</p>
@@ -1310,22 +1310,22 @@ export default function AdminDashboard({
                 const suppliedCount = (v.supplied_skus || []).length;
 
                 return (
-                  <div key={v.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm hover:border-slate-700 transition">
+                  <div key={v.id} className="bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-sm hover:border-slate-200 transition">
                     {/* Top: Name, Contact & Composite Score */}
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-white text-base">{v.name}</h4>
-                          <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">
+                          <h4 className="font-bold text-slate-900 text-base">{v.name}</h4>
+                          <span className="text-[10px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.2 rounded border border-slate-200">
                             {v.id}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 font-mono mt-0.5">{v.email} • {v.phone || '+91 98xxx xxxxx'}</p>
+                        <p className="text-xs text-slate-500 font-mono mt-0.5">{v.email} • {v.phone || '+91 98xxx xxxxx'}</p>
                       </div>
 
                       <div className="text-right">
-                        <div className="flex items-center gap-1 text-amber-400 font-bold text-base bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-xl">
-                          <Star size={15} className="fill-amber-400 text-amber-400" />
+                        <div className="flex items-center gap-1 text-amber-600 font-bold text-base bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-xl">
+                          <Star size={15} className="fill-amber-400 text-amber-600" />
                           <span>{composite}</span>
                         </div>
                         <span className="text-[10px] text-slate-500 block mt-0.5">Composite Score</span>
@@ -1333,7 +1333,7 @@ export default function AdminDashboard({
                     </div>
 
                     {/* 4 Rating Pillars Breakdown */}
-                    <div className="grid grid-cols-4 gap-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
+                    <div className="grid grid-cols-4 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
                       <div>
                         <span className="text-[10px] text-slate-500 block uppercase">Quality</span>
                         <strong className="text-xs text-white">★{ratings.quality}</strong>
@@ -1355,14 +1355,14 @@ export default function AdminDashboard({
                     {/* Supply Catalog Summary */}
                     <div>
                       <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-slate-400 font-semibold flex items-center gap-1.5">
-                          <Package size={14} className="text-emerald-400" />
+                        <span className="text-slate-500 font-semibold flex items-center gap-1.5">
+                          <Package size={14} className="text-emerald-600" />
                           <span>Supply Catalogue ({suppliedCount} Articles)</span>
                         </span>
 
                         <button
                           onClick={() => setEditingCatalogVendor(v)}
-                          className="text-emerald-400 hover:underline font-semibold flex items-center gap-1"
+                          className="text-emerald-600 hover:underline font-semibold flex items-center gap-1"
                         >
                           <Edit3 size={12} />
                           <span>Edit Catalogue</span>
@@ -1373,7 +1373,7 @@ export default function AdminDashboard({
                         {(v.supplied_skus || []).map((code) => {
                           const item = skuMaster.find(s => s.sku_code === code);
                           return (
-                            <span key={code} className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700/80 px-2 py-0.5 rounded-lg">
+                            <span key={code} className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-lg">
                               {item ? item.item_name.split(' ')[0] : code}
                             </span>
                           );
@@ -1386,10 +1386,10 @@ export default function AdminDashboard({
 
                     {/* Admin Action: Adjust 4 Pillars */}
                     {isAdmin && (
-                      <div className="pt-2 border-t border-slate-800 flex justify-end">
+                      <div className="pt-2 border-t border-slate-200 flex justify-end">
                         <button
                           onClick={() => handleOpenRatingsModal(v)}
-                          className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                          className="text-xs text-slate-500 hover:text-white flex items-center gap-1"
                         >
                           <span>Adjust 4-Pillar Ratings</span>
                           <ChevronRight size={13} />
@@ -1405,25 +1405,25 @@ export default function AdminDashboard({
           {/* Modal: Onboard / Add New Vendor */}
           {isAddVendorOpen && (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-xl shadow-slate-200/50">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                    <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl">
                       <UserPlus size={18} />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white">Onboard New Supplier</h3>
-                      <p className="text-xs text-slate-400">Add a new Mandi trader or supplier to Pluckk</p>
+                      <h3 className="text-base font-bold text-slate-900">Onboard New Supplier</h3>
+                      <p className="text-xs text-slate-500">Add a new Mandi trader or supplier to Pluckk</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsAddVendorOpen(false)} className="text-slate-400 hover:text-white p-1">
+                  <button onClick={() => setIsAddVendorOpen(false)} className="text-slate-500 hover:text-white p-1">
                     <X size={18} />
                   </button>
                 </div>
 
                 <form onSubmit={handleCreateVendorSubmit} className="space-y-4">
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
                       Supplier / Trader Name *
                     </label>
                     <input
@@ -1432,12 +1432,12 @@ export default function AdminDashboard({
                       placeholder="e.g. Mahindroo Fresh Produce / Ramesh Mandi"
                       value={newVendor.name}
                       onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
                       Supplier Work Email *
                     </label>
                     <input
@@ -1446,7 +1446,7 @@ export default function AdminDashboard({
                       placeholder="vendor@gmail.com or mandi@yahoo.com"
                       value={newVendor.email}
                       onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     />
                     <span className="text-[10px] text-slate-500 mt-0.5 block">
                       Non-pluckk emails automatically receive restricted 1-to-1 Supplier portal view.
@@ -1454,7 +1454,7 @@ export default function AdminDashboard({
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
                       Phone Number (Optional)
                     </label>
                     <input
@@ -1462,22 +1462,22 @@ export default function AdminDashboard({
                       placeholder="+91 98200 xxxxx"
                       value={newVendor.phone}
                       onChange={(e) => setNewVendor({ ...newVendor, phone: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                    <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                       Initial Supply Catalogue (Select items they supply):
                     </label>
-                    <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-xl border border-slate-200">
                       {skuMaster.map((sku) => {
                         const checked = newVendor.supplied_skus.includes(sku.sku_code);
                         return (
                           <label
                             key={sku.sku_code}
                             className={`flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition ${
-                              checked ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'text-slate-400 hover:bg-slate-900'
+                              checked ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'text-slate-500 hover:bg-white'
                             }`}
                           >
                             <span className="font-medium">{sku.item_name}</span>
@@ -1498,11 +1498,11 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
                     <button
                       type="button"
                       onClick={() => setIsAddVendorOpen(false)}
-                      className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                      className="px-4 py-2 text-xs text-slate-500 hover:text-white"
                     >
                       Cancel
                     </button>
@@ -1532,16 +1532,16 @@ export default function AdminDashboard({
           {/* Edit Ratings Modal (Admin Only) */}
           {editingRatingsVendor && (
             <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <h3 className="text-sm font-bold text-white">Adjust Ratings: {editingRatingsVendor.name}</h3>
-                  <button onClick={() => setEditingRatingsVendor(null)} className="text-slate-400 hover:text-white">✕</button>
+              <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl shadow-slate-200/50">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h3 className="text-sm font-bold text-slate-900">Adjust Ratings: {editingRatingsVendor.name}</h3>
+                  <button onClick={() => setEditingRatingsVendor(null)} className="text-slate-500 hover:text-white">✕</button>
                 </div>
 
                 <form onSubmit={handleSaveRatings} className="space-y-3 text-xs">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-slate-400 block mb-1">Quality Score (1-5):</label>
+                      <label className="text-slate-500 block mb-1">Quality Score (1-5):</label>
                       <input
                         type="number"
                         step="0.1"
@@ -1549,12 +1549,12 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.quality}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, quality: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="text-slate-400 block mb-1">Price Score (1-5):</label>
+                      <label className="text-slate-500 block mb-1">Price Score (1-5):</label>
                       <input
                         type="number"
                         step="0.1"
@@ -1562,12 +1562,12 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.price}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, price: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="text-slate-400 block mb-1">Fill Rate Score (1-5):</label>
+                      <label className="text-slate-500 block mb-1">Fill Rate Score (1-5):</label>
                       <input
                         type="number"
                         step="0.1"
@@ -1575,12 +1575,12 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.fill_rate}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, fill_rate: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="text-slate-400 block mb-1">Delivery Time (1-5):</label>
+                      <label className="text-slate-500 block mb-1">Delivery Time (1-5):</label>
                       <input
                         type="number"
                         step="0.1"
@@ -1588,7 +1588,7 @@ export default function AdminDashboard({
                         min="1.0"
                         value={ratingInputs.delivery_time}
                         onChange={(e) => setRatingInputs({ ...ratingInputs, delivery_time: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-white font-bold"
                       />
                     </div>
                   </div>
@@ -1597,8 +1597,8 @@ export default function AdminDashboard({
                     When multiple suppliers quote the exact same rate, the higher composite score automatically wins the order allocation.
                   </p>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-                    <button type="button" onClick={() => setEditingRatingsVendor(null)} className="px-3 py-2 text-slate-400">Cancel</button>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                    <button type="button" onClick={() => setEditingRatingsVendor(null)} className="px-3 py-2 text-slate-500">Cancel</button>
                     <button type="submit" className="px-4 py-2 font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl">Save Ratings</button>
                   </div>
                 </form>
@@ -1611,13 +1611,13 @@ export default function AdminDashboard({
       {/* TAB 3: SKU Master Catalog View (Admin Only) */}
       {isAdmin && activeSubTab === 'sku_master' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-4 rounded-3xl">
+          <div className="flex items-center justify-between bg-white border border-slate-200 p-4 rounded-3xl">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Database size={16} className="text-emerald-400" />
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Database size={16} className="text-emerald-600" />
                 <span>Pluckk SKU Master Catalog ({skuMaster.length} Items)</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Master definitions of all fresh articles, units, benchmark purchase rates, and APMC Mandi quality specifications.
               </p>
             </div>
@@ -1631,10 +1631,10 @@ export default function AdminDashboard({
             </button>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">SKU Code</th>
                   <th className="py-3 px-4">Article Name</th>
                   <th className="py-3 px-3">Category</th>
@@ -1643,27 +1643,27 @@ export default function AdminDashboard({
                   <th className="py-3 px-4">APMC Mandi Quality Specification</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-sm">
+              <tbody className="divide-y divide-slate-100 text-sm">
                 {skuMaster.map((sku) => (
-                  <tr key={sku.sku_code} className="hover:bg-slate-800/30 transition">
-                    <td className="py-3 px-4 font-mono text-xs text-emerald-400 font-semibold">
+                  <tr key={sku.sku_code} className="hover:bg-slate-100 transition">
+                    <td className="py-3 px-4 font-mono text-xs text-emerald-600 font-semibold">
                       {sku.sku_code}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-white">
+                    <td className="py-3 px-4 font-semibold text-slate-900">
                       {sku.item_name}
                     </td>
-                    <td className="py-3 px-3 text-xs text-slate-400">
-                      <span className="bg-slate-800 px-2 py-0.5 rounded">
+                    <td className="py-3 px-3 text-xs text-slate-500">
+                      <span className="bg-slate-100 px-2 py-0.5 rounded">
                         {sku.category}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-xs text-slate-300">
+                    <td className="py-3 px-3 text-xs text-slate-700">
                       {sku.unit}
                     </td>
-                    <td className="py-3 px-3 text-xs font-bold text-emerald-400">
+                    <td className="py-3 px-3 text-xs font-bold text-emerald-600">
                       ₹{sku.benchmark_rate?.toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 text-xs text-slate-400 max-w-xs truncate">
+                    <td className="py-3 px-4 text-xs text-slate-500 max-w-xs truncate">
                       {sku.mandi_spec || 'Standard APMC Grade A'}
                     </td>
                   </tr>

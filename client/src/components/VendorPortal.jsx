@@ -200,15 +200,15 @@ export default function VendorPortal({
       {!isInstalled && (
         <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border border-emerald-500/40 rounded-3xl p-3.5 flex items-center justify-between gap-3 shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-white text-lg shadow-md shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-slate-900 text-lg shadow-md shrink-0">
               P
             </div>
             <div>
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                 <span>Install Pluckk Supplier App</span>
                 <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-semibold uppercase">Mobile PWA</span>
               </h4>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-slate-700">
                 Add to your phone home screen for live mandi updates & buzz alerts.
               </p>
             </div>
@@ -225,7 +225,7 @@ export default function VendorPortal({
           ) : (
             <button
               onClick={() => alert("📱 To install on your phone:\n\n• Android (Chrome): Tap the 3 dots (⋮) in Chrome -> 'Install app' or 'Add to Home screen'.\n\n• iPhone (Safari): Tap the Share button (⎋) at the bottom -> 'Add to Home Screen' (➕).")}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-semibold transition shrink-0 border border-slate-700"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-700 text-slate-800 rounded-xl text-[11px] font-semibold transition shrink-0 border border-slate-200"
             >
               <span>Install Guide 📲</span>
             </button>
@@ -235,9 +235,9 @@ export default function VendorPortal({
 
       {/* Device Notifications Opt-In */}
       {notifPermission !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
-        <div className="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs">
+        <div className="bg-blue-50 border border-blue-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-blue-300">
-            <Bell size={14} className="text-blue-400 shrink-0" />
+            <Bell size={14} className="text-blue-600 shrink-0" />
             <span className="text-[11px]">Turn on sound & vibration alerts for 12:30 AM indents & shortfall broadcasts</span>
           </div>
           <button
@@ -250,15 +250,15 @@ export default function VendorPortal({
       )}
 
       {/* Mobile Top Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
+      <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
               P
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider font-semibold text-emerald-400">Pluckk Supplier Portal</div>
-              <div className="text-sm font-bold text-white">Daily Mandi Procurement</div>
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600">Pluckk Supplier Portal</div>
+              <div className="text-sm font-bold text-slate-900">Daily Mandi Procurement</div>
             </div>
           </div>
 
@@ -277,27 +277,27 @@ export default function VendorPortal({
         </div>
 
         {/* Vendor Selector Pill or Fixed Supplier View */}
-        <div className="pt-2 border-t border-slate-800">
+        <div className="pt-2 border-t border-slate-200">
           {isRestricted ? (
-            <div className="flex items-center justify-between text-xs bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
+            <div className="flex items-center justify-between text-xs bg-slate-100 p-2.5 rounded-xl border border-slate-200">
               <div>
-                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Verified Supplier:</span>
-                <span className="font-bold text-white text-sm">{currentUser?.name || currentVendor?.name || 'Verified Supplier'}</span>
-                <span className="text-[11px] text-slate-400 block font-mono">{currentUser?.email || currentVendor?.email || ''}</span>
+                <span className="text-[10px] text-slate-500 block font-semibold uppercase">Verified Supplier:</span>
+                <span className="font-bold text-slate-900 text-sm">{currentUser?.name || currentVendor?.name || 'Verified Supplier'}</span>
+                <span className="text-[11px] text-slate-500 block font-mono">{currentUser?.email || currentVendor?.email || ''}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg font-semibold block">
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg font-semibold block">
                   1-to-1 Verified
                 </span>
-                <span className="text-[10px] text-amber-400 flex items-center gap-0.5 justify-end mt-1">
-                  <Star size={10} className="fill-amber-400 text-amber-400" />
+                <span className="text-[10px] text-amber-600 flex items-center gap-0.5 justify-end mt-1">
+                  <Star size={10} className="fill-amber-400 text-amber-600" />
                   <span>★{currentVendor?.compositeRating || 4.8} Score</span>
                 </span>
               </div>
             </div>
           ) : (
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">Acting as Supplier (Switch to test):</label>
+              <label className="text-[11px] text-slate-500 block mb-1">Acting as Supplier (Switch to test):</label>
               <div className="grid grid-cols-2 gap-1.5">
                 {(vendors || []).map((v) => (
                   <button
@@ -306,7 +306,7 @@ export default function VendorPortal({
                     className={`text-left px-2.5 py-1.5 rounded-xl text-xs transition border flex items-center justify-between ${
                       v.id === currentVendor?.id
                         ? 'bg-emerald-600 text-white font-semibold border-emerald-500 shadow-sm'
-                        : 'bg-slate-800/80 text-slate-300 border-slate-700/60 hover:bg-slate-700'
+                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-700'
                     }`}
                   >
                     <span className="truncate">{v.name.split(' ')[0]} {v.name.split(' ')[1] || ''}</span>
@@ -327,7 +327,7 @@ export default function VendorPortal({
       }`}>
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 ${
-            isWindowOpen ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+            isWindowOpen ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-600 border border-amber-500/30'
           }`}>
             <Clock size={20} />
           </div>
@@ -337,12 +337,12 @@ export default function VendorPortal({
                 {isWindowOpen ? '🟢 Bidding Window Open (12:30 AM – 5:00 AM)' : '🔒 Bidding Window Closed (Locked at 5:00 AM)'}
               </span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                isWindowOpen ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                isWindowOpen ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'
               }`}>
                 {isWindowOpen ? 'Adjust Rates Anytime' : 'Allocations Finalized'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-300 mt-0.5">
+            <p className="text-[11px] text-slate-700 mt-0.5">
               {isWindowOpen 
                 ? 'The system waits until 5:00 AM to accept bids. You can freely adjust your rate and quantity anytime before 5:00 AM!'
                 : 'As clock hit 5:00 AM, the system approved lowest-price bids (L1). Quoted prices are now locked.'}
@@ -351,16 +351,16 @@ export default function VendorPortal({
         </div>
 
         {isWindowOpen && (
-          <div className="text-right shrink-0 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/60">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Allocation Time</span>
-            <span className="text-xs font-mono font-bold text-emerald-400">05:00 AM IST</span>
+          <div className="text-right shrink-0 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">Allocation Time</span>
+            <span className="text-xs font-mono font-bold text-emerald-600">05:00 AM IST</span>
           </div>
         )}
       </div>
 
       {/* 1-to-1 Privacy & L1 Lowest Price Rule Note */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 text-xs text-slate-400 space-y-1">
-        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-xs text-slate-500 space-y-1">
+        <div className="flex items-center gap-2 text-emerald-600 font-semibold">
           <ShieldCheck size={16} className="shrink-0" />
           <span>1-to-1 Least-Cost Allocation Engine</span>
         </div>
@@ -371,29 +371,29 @@ export default function VendorPortal({
 
       {/* My Confirmed Allocations Section (Only after 5:00 AM window lock) */}
       {!isWindowOpen && myCommitments.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <CheckCircle2 size={16} className="text-emerald-600" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Your Approved Commitments ({myCommitments.length})
               </h3>
             </div>
-            <span className="text-[11px] text-emerald-400 font-semibold">Accepted at 5:00 AM</span>
+            <span className="text-[11px] text-emerald-600 font-semibold">Accepted at 5:00 AM</span>
           </div>
 
           <div className="space-y-2">
             {myCommitments.map((c) => (
               <div 
                 key={c.sku_code} 
-                className="bg-slate-800/60 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-between gap-3"
+                className="bg-slate-100 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-between gap-3"
               >
                 <div>
-                  <div className="text-sm font-semibold text-white">{c.item_name}</div>
-                  <div className="text-xs text-emerald-400 font-bold mt-0.5">
+                  <div className="text-sm font-semibold text-slate-900">{c.item_name}</div>
+                  <div className="text-xs text-emerald-600 font-bold mt-0.5">
                     {c.committed_qty} {c.unit} approved @ ₹{c.quoted_rate}/{c.unit}
                     {c.total_bid_qty > c.committed_qty && (
-                      <span className="text-slate-400 font-normal ml-1">
+                      <span className="text-slate-500 font-normal ml-1">
                         (bid for {c.total_bid_qty} {c.unit})
                       </span>
                     )}
@@ -405,7 +405,7 @@ export default function VendorPortal({
                     setBackoutSku(c);
                     setBackoutDropQty(c.committed_qty.toString());
                   }}
-                  className="px-2.5 py-1.5 text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl transition shrink-0"
+                  className="px-2.5 py-1.5 text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/30 rounded-xl transition shrink-0"
                   title="Report stock shortfall or release your allocation"
                 >
                   Report Shortfall / Release
@@ -419,7 +419,7 @@ export default function VendorPortal({
       {/* Live Open Indent Items (Filtered by this vendor's catalog) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Available Requirements (Matched to your Catalogue)
           </h3>
           <span className="text-xs text-slate-500">
@@ -437,37 +437,37 @@ export default function VendorPortal({
               key={item.sku_code}
               className={`rounded-3xl border p-4 transition-all duration-200 ${
                 isFulfilled 
-                  ? 'bg-slate-950/60 border-slate-800/50 opacity-75' 
+                  ? 'bg-slate-50 border-slate-100 opacity-75' 
                   : item.status === 'PARTIALLY_FULFILLED'
-                  ? 'bg-slate-900 border-amber-500/30 shadow-sm'
-                  : 'bg-slate-900 border-slate-800 shadow-sm'
+                  ? 'bg-white border-amber-500/30 shadow-sm'
+                  : 'bg-white border-slate-200 shadow-sm'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white text-base">{item.item_name}</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                    <span className="font-semibold text-slate-900 text-base">{item.item_name}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
                       {item.category}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    Pluckk Target: <strong className="text-emerald-400 font-semibold">₹{item.target_rate}/{item.unit}</strong> • Target Qty: {item.required_qty} {item.unit}
+                  <div className="text-xs text-slate-500 mt-1">
+                    Pluckk Target: <strong className="text-emerald-600 font-semibold">₹{item.target_rate}/{item.unit}</strong> • Target Qty: {item.required_qty} {item.unit}
                   </div>
                 </div>
 
                 {/* Status Badges */}
                 <div>
                   {isFulfilled ? (
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                       <Lock size={12} /> Closed
                     </span>
                   ) : item.status === 'PARTIALLY_FULFILLED' ? (
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
                       {item.remaining_qty} {item.unit} Left
                     </span>
                   ) : (
-                    <span className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
                       {item.remaining_qty} {item.unit} Open
                     </span>
                   )}
@@ -477,15 +477,15 @@ export default function VendorPortal({
               {/* My quote status pill: handles Window OPEN vs LOCKED */}
               {myBid && (
                 isWindowOpen ? (
-                  <div className="mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border bg-blue-950/40 border-blue-500/40 text-blue-200 shadow-xs">
+                  <div className="mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border bg-blue-50 border-blue-500/40 text-blue-200 shadow-xs">
                     <div>
                       <div className="font-bold flex items-center gap-1.5 text-white">
-                        <span className="text-blue-400">📝 Your Submitted Quote:</span>
-                        <span className="text-emerald-400 font-bold font-mono">
+                        <span className="text-blue-600">📝 Your Submitted Quote:</span>
+                        <span className="text-emerald-600 font-bold font-mono">
                           {myBid.quantity} {item.unit} @ ₹{myBid.quoted_rate}/{item.unit}
                         </span>
                       </div>
-                      <span className="block text-[11px] text-slate-300 mt-0.5">
+                      <span className="block text-[11px] text-slate-700 mt-0.5">
                         ⏳ Pending 5:00 AM allocation. You can adjust your price anytime before 5:00 AM!
                       </span>
                     </div>
@@ -500,8 +500,8 @@ export default function VendorPortal({
                 ) : (
                   <div className={`mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border ${
                     myBid.allocated_qty > 0
-                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                      : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                      ? 'bg-emerald-50 border-emerald-500/40 text-emerald-200'
+                      : 'bg-amber-50 border-amber-500/40 text-amber-200'
                   }`}>
                     <div>
                       <span className="font-bold text-sm">
@@ -517,7 +517,7 @@ export default function VendorPortal({
                     </div>
 
                     {myBid.allocated_qty > 0 && (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg font-bold">
+                      <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold">
                         L1 Winner
                       </span>
                     )}
@@ -526,18 +526,18 @@ export default function VendorPortal({
               )}
 
               {/* Bidding / Action Area */}
-              <div className="mt-3.5 pt-3 border-t border-slate-800/80">
+              <div className="mt-3.5 pt-3 border-t border-slate-100">
                 {isWindowOpen ? (
                   isSelected ? (
-                    <div className="space-y-3 bg-slate-800/50 p-3.5 rounded-2xl border border-slate-700/60">
-                      <div className="text-xs font-bold text-white flex items-center justify-between">
+                    <div className="space-y-3 bg-slate-100 p-3.5 rounded-2xl border border-slate-200">
+                      <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
                         <span>{myBid ? `✏️ Adjust Quote for ${item.item_name}` : `Submit Quote for ${item.item_name}`}</span>
-                        <span className="text-slate-400 text-[11px]">Pluckk Target: ₹{item.target_rate}/{item.unit}</span>
+                        <span className="text-slate-500 text-[11px]">Pluckk Target: ₹{item.target_rate}/{item.unit}</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="text-[11px] text-slate-300 block mb-1">
+                          <label className="text-[11px] text-slate-700 block mb-1">
                             Your Price per {item.unit} (₹):
                           </label>
                           <input
@@ -547,12 +547,12 @@ export default function VendorPortal({
                             placeholder="e.g. 25.00"
                             value={quotedRate}
                             onChange={(e) => setQuotedRate(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] text-slate-300 block mb-1">
+                          <label className="text-[11px] text-slate-700 block mb-1">
                             Quantity you can give ({item.unit}):
                           </label>
                           <input
@@ -561,19 +561,19 @@ export default function VendorPortal({
                             placeholder={`e.g. ${item.remaining_qty || 50}`}
                             value={quotedQty}
                             onChange={(e) => setQuotedQty(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-slate-500">
                           ⏱️ You can adjust again before 5:00 AM
                         </span>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setSelectedSku(null)}
-                            className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                            className="px-3 py-1.5 text-xs text-slate-500 hover:text-white"
                           >
                             Cancel
                           </button>
@@ -593,7 +593,7 @@ export default function VendorPortal({
                         onClick={() => handleStartQuote(item)}
                         className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition shadow-sm active:scale-98 flex items-center justify-center gap-1.5 ${
                           myBid 
-                            ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700' 
+                            ? 'bg-slate-100 hover:bg-slate-700 text-emerald-600 border border-slate-200' 
                             : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                         }`}
                       >
@@ -614,14 +614,14 @@ export default function VendorPortal({
                         return (
                           <div className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
                             myFffApp.status === 'ACCEPTED'
-                              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                              ? 'bg-emerald-50 border-emerald-500/40 text-emerald-200'
                               : myFffApp.status === 'REJECTED'
-                              ? 'bg-red-950/40 border-red-500/40 text-red-200'
-                              : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                              ? 'bg-red-50 border-red-500/40 text-red-200'
+                              : 'bg-amber-50 border-amber-500/40 text-amber-200'
                           }`}>
                             <div className="flex items-center justify-between font-bold">
                               <span className="flex items-center gap-1.5">
-                                <Zap size={14} className="text-amber-400" />
+                                <Zap size={14} className="text-amber-600" />
                                 <span>Round 2 FFF Application Submitted</span>
                               </span>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-extrabold ${
@@ -635,8 +635,8 @@ export default function VendorPortal({
                               </span>
                             </div>
 
-                            <div className="text-slate-300 text-xs">
-                              Offered: <strong className="text-white">{myFffApp.quantity} {item.unit}</strong> @ <strong className="text-emerald-400 font-mono">₹{myFffApp.quoted_rate}/{item.unit}</strong>
+                            <div className="text-slate-700 text-xs">
+                              Offered: <strong className="text-white">{myFffApp.quantity} {item.unit}</strong> @ <strong className="text-emerald-600 font-mono">₹{myFffApp.quoted_rate}/{item.unit}</strong>
                               <span className="text-slate-500 ml-2 font-mono text-[11px]">Logged at: {myFffApp.received_time || 'Just now'}</span>
                             </div>
 
@@ -678,23 +678,23 @@ export default function VendorPortal({
                         <div className="bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900 border border-amber-500/50 p-3.5 rounded-2xl space-y-3 shadow-md">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
-                              <Zap size={14} className="text-amber-400 animate-bounce" />
+                              <Zap size={14} className="text-amber-600 animate-bounce" />
                               <span>⚡ ROUND 2: FASTEST FINGER FIRST (LIVE)</span>
                             </div>
-                            <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-bold">
                               {item.remaining_qty} {item.unit} Shortfall Needed
                             </span>
                           </div>
 
-                          <p className="text-[11px] text-slate-300 leading-snug">
+                          <p className="text-[11px] text-slate-700 leading-snug">
                             Sourcing reopened this item for emergency shortfall fulfillment. The <strong>first vendor to apply</strong> is reviewed immediately by Sourcing Ops!
                           </p>
 
                           {isApplying ? (
-                            <div className="bg-slate-900/80 border border-slate-700/80 p-3 rounded-xl space-y-2.5">
+                            <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2.5">
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <label className="text-[10px] font-semibold text-slate-300 block mb-0.5">
+                                  <label className="text-[10px] font-semibold text-slate-700 block mb-0.5">
                                     Offered Qty ({item.unit}):
                                   </label>
                                   <input
@@ -704,11 +704,11 @@ export default function VendorPortal({
                                     value={fffQty}
                                     onChange={(e) => setFffQty(e.target.value)}
                                     placeholder={item.remaining_qty.toString()}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-semibold text-slate-300 block mb-0.5">
+                                  <label className="text-[10px] font-semibold text-slate-700 block mb-0.5">
                                     Quoted Price (₹/{item.unit}):
                                   </label>
                                   <input
@@ -718,7 +718,7 @@ export default function VendorPortal({
                                     value={fffRate}
                                     onChange={(e) => setFffRate(e.target.value)}
                                     placeholder={item.target_rate?.toString() || '25'}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
                                   />
                                 </div>
                               </div>
@@ -726,7 +726,7 @@ export default function VendorPortal({
                               <div className="flex items-center justify-end gap-2 pt-1">
                                 <button
                                   onClick={() => setFffApplyingSku(null)}
-                                  className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-white"
+                                  className="px-2.5 py-1 text-[11px] text-slate-500 hover:text-white"
                                 >
                                   Cancel
                                 </button>
@@ -757,7 +757,7 @@ export default function VendorPortal({
                       );
                     })()
                   ) : (
-                    <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-400 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
                       <Lock size={13} className="text-slate-500" />
                       <span>Bidding window closed at 5:00 AM. Prices are locked.</span>
                     </div>
@@ -770,10 +770,10 @@ export default function VendorPortal({
 
         {/* Empty State: If vendor has no items in their catalog */}
         {visibleItems.length === 0 && (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-3">
             <Package size={36} className="mx-auto text-slate-600" />
-            <h4 className="text-sm font-bold text-white">No Matching Articles in your Catalogue</h4>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            <h4 className="text-sm font-bold text-slate-900">No Matching Articles in your Catalogue</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
               Your screen is set up to only show articles you supply. You currently have <strong>{mySuppliedSkus.length}</strong> articles selected in your catalogue.
             </p>
             <button
@@ -799,24 +799,24 @@ export default function VendorPortal({
       {/* Modal: Report Shortfall / Stock Release */}
       {backoutSku && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-red-500/40 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-xl">
+          <div className="bg-white border border-red-500/40 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-xl">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2.5 text-red-400 font-bold">
+              <div className="flex items-center gap-2.5 text-red-600 font-bold">
                 <AlertTriangle size={20} />
                 <span>Report Stock Shortfall / Release Demand</span>
               </div>
-              <button onClick={() => setBackoutSku(null)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setBackoutSku(null)} className="text-slate-500 hover:text-white">
                 <X size={18} />
               </button>
             </div>
 
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-700">
               Reporting a stock issue or release for <strong>{backoutSku.item_name}</strong>. The system will immediately notify Pluckk and reopen the demand to alternative suppliers.
             </p>
 
             <form onSubmit={handleBackoutSubmit} className="space-y-3">
               <div>
-                <label className="text-xs text-slate-400 block mb-1">
+                <label className="text-xs text-slate-500 block mb-1">
                   How many kg can you NOT supply? (Max {backoutSku.committed_qty} {backoutSku.unit}):
                 </label>
                 <input
@@ -826,16 +826,16 @@ export default function VendorPortal({
                   required
                   value={backoutDropQty}
                   onChange={(e) => setBackoutDropQty(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500"
+                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Reason for shortfall / stock release:</label>
+                <label className="text-xs text-slate-500 block mb-1">Reason for shortfall / stock release:</label>
                 <select
                   value={backoutReason}
                   onChange={(e) => setBackoutReason(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-red-500"
+                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-red-500"
                 >
                   <option value="Poor quality batch at APMC mandi">Poor quality batch at APMC mandi</option>
                   <option value="Mandi rate skyrocketed beyond budget">Mandi rate skyrocketed beyond budget</option>
@@ -849,7 +849,7 @@ export default function VendorPortal({
                 <button
                   type="button"
                   onClick={() => setBackoutSku(null)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-white"
+                  className="px-3 py-2 text-xs text-slate-500 hover:text-white"
                 >
                   Cancel
                 </button>

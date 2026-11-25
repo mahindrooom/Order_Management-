@@ -30,12 +30,12 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl font-bold border border-amber-500/30">
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl font-bold border border-amber-200 shadow-sm">
             ⚠️
           </div>
-          <h2 className="text-xl font-bold">Session State Restored</h2>
-          <p className="text-xs text-slate-400 max-w-md">
+          <h2 className="text-xl font-bold text-slate-900">Session State Restored</h2>
+          <p className="text-xs text-slate-500 max-w-md">
             {this.state.error?.message || 'A temporary display state mismatch was caught.'}
           </p>
           <div className="flex items-center gap-3 pt-2">
@@ -47,7 +47,7 @@ class ErrorBoundary extends React.Component {
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+              className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium transition shadow-xs"
             >
               Reload Page
             </button>
@@ -722,42 +722,42 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
       {/* Top Navigation Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40">
+      <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo / Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-xl text-white shadow-lg shadow-emerald-500/20 shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-xl text-white shadow-md shadow-emerald-600/20 shrink-0">
               P
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black tracking-tight text-white">Pluckk</h1>
+                <h1 className="text-lg font-black tracking-tight text-slate-900">Pluckk</h1>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                   isAdmin 
-                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' 
+                    ? 'bg-purple-50 text-purple-700 border-purple-200' 
                     : isSourcing
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-blue-50 text-blue-700 border-blue-200'
                 }`}>
                   {isAdmin ? '👑 EXECUTIVE ADMIN' : isSourcing ? '🛒 SOURCING OPS' : '🚚 SUPPLIER PORTAL (1-to-1)'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Night Indent (12:30 AM) & Lowest-Price (L1) Engine</p>
+              <p className="text-[11px] text-slate-500">Night Indent (12:30 AM) & Lowest-Price (L1) Engine</p>
             </div>
           </div>
 
           {/* View Mode Switcher Tabs (Only visible to Admin & Sourcing) */}
           {isSourcing ? (
-            <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-2xl border border-slate-700/60 text-xs font-semibold">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-semibold">
               {isAdmin && (
                 <button
                   onClick={() => setActiveTab('simulator')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
                     activeTab === 'simulator'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <SplitSquareVertical size={14} />
@@ -769,8 +769,8 @@ function MainApp() {
                 onClick={() => setActiveTab('admin')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
                   activeTab === 'admin'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Building2 size={14} />
@@ -781,8 +781,8 @@ function MainApp() {
                 onClick={() => setActiveTab('vendor')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
                   activeTab === 'vendor'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Smartphone size={14} />
@@ -791,20 +791,20 @@ function MainApp() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-blue-950/40 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs text-blue-300">
-                <ShieldCheck size={14} className="text-blue-400" />
+              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-xs text-blue-700">
+                <ShieldCheck size={14} className="text-blue-600" />
                 <span className="font-semibold">1-to-1 Supplier Mode</span>
               </div>
 
-              {/* 📦 TOP-RIGHT MY SUPPLY CATALOGUE BUTTON (Directly as circled in user's screenshot) */}
+              {/* 📦 TOP-RIGHT MY SUPPLY CATALOGUE BUTTON */}
               <button
                 onClick={() => setIsVendorCatalogModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 border border-emerald-500/40"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
                 title="Manage what articles you supply to Pluckk"
               >
                 <Package size={14} />
                 <span>My Supply Catalogue</span>
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-800 text-white text-[10px]">
                   {activeVendorObj.supplied_skus?.length || 0}
                 </span>
               </button>
@@ -815,43 +815,43 @@ function MainApp() {
           <div className="flex items-center gap-3">
             {dbStatus.connected ? (
               <div 
-                className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30"
+                className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200"
                 title="Active Connection: MongoDB Atlas Cloud Database"
               >
-                <Database size={12} className="text-emerald-400" />
+                <Database size={12} className="text-emerald-600" />
                 <span>MongoDB Atlas</span>
               </div>
             ) : (
               <div 
-                className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-400 font-medium bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-700/60"
+                className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-600 font-medium bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200"
                 title="Running with persistent store"
               >
-                <Database size={12} className="text-slate-400" />
+                <Database size={12} className="text-slate-500" />
                 <span>Persistent DB</span>
               </div>
             )}
 
             {connected ? (
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-700 font-medium bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Live Sync</span>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-red-400 font-medium bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-red-700 font-medium bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
                 <WifiOff size={12} />
                 <span>Offline</span>
               </div>
             )}
 
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
               <div className="text-right hidden md:block">
-                <div className="text-xs font-bold text-white truncate max-w-[150px]">{currentUser.name}</div>
-                <div className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">{currentUser.email}</div>
+                <div className="text-xs font-bold text-slate-900 truncate max-w-[150px]">{currentUser.name}</div>
+                <div className="text-[10px] text-slate-500 font-mono truncate max-w-[150px]">{currentUser.email}</div>
               </div>
 
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition border border-transparent hover:border-slate-700"
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-200"
                 title="Sign Out"
               >
                 <LogOut size={16} />
@@ -935,34 +935,34 @@ function MainApp() {
       {/* Floating Real-Time Top Push Notification Banner (Optimized for Mobile & Desktop) */}
       {toast && (
         <div className="fixed top-4 left-3 right-3 sm:left-auto sm:right-6 sm:top-6 sm:max-w-md z-50 animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className={`p-4 rounded-3xl shadow-2xl border text-sm flex items-start gap-3 backdrop-blur-md ${
+          <div className={`p-4 rounded-3xl shadow-xl border text-sm flex items-start gap-3 backdrop-blur-md ${
             toast.severity === 'critical'
-              ? 'bg-red-950/95 border-red-500 text-white shadow-red-950/50'
+              ? 'bg-red-50 border-red-200 text-red-900 shadow-red-500/10'
               : toast.severity === 'warning'
-              ? 'bg-amber-950/95 border-amber-500 text-amber-100 shadow-amber-950/50'
+              ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-amber-500/10'
               : toast.severity === 'success'
-              ? 'bg-emerald-950/95 border-emerald-500 text-emerald-100 shadow-emerald-950/50'
-              : 'bg-slate-900/95 border-slate-700 text-white shadow-slate-950/50'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900 shadow-emerald-500/10'
+              : 'bg-white border-slate-200 text-slate-900 shadow-slate-500/10'
           }`}>
             {toast.severity === 'critical' ? (
-              <ShieldAlert size={22} className="text-red-400 shrink-0 mt-0.5" />
+              <ShieldAlert size={22} className="text-red-600 shrink-0 mt-0.5" />
             ) : toast.severity === 'warning' ? (
-              <AlertTriangle size={22} className="text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle size={22} className="text-amber-600 shrink-0 mt-0.5" />
             ) : (
-              <CheckCircle2 size={22} className="text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 size={22} className="text-emerald-600 shrink-0 mt-0.5" />
             )}
             <div className="flex-1 min-w-0">
               <div className="font-bold text-xs uppercase tracking-wider opacity-90 flex items-center justify-between">
                 <span>{toast.title || (toast.severity === 'critical' ? 'Urgent Alert' : 'Procurement Broadcast')}</span>
                 <span className="text-[10px] opacity-60">Live Now</span>
               </div>
-              <div className="text-xs font-semibold mt-1 leading-snug text-slate-100">
+              <div className="text-xs font-semibold mt-1 leading-snug text-slate-800">
                 {toast.message}
               </div>
             </div>
             <button 
               onClick={() => setToast(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg text-xs"
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg text-xs"
             >
               ✕
             </button>
