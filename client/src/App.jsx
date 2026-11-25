@@ -281,6 +281,15 @@ function MainApp() {
       }
     });
 
+    s.on('window:status_changed', (data) => {
+      setIndent(prev => prev ? { ...prev, bidding_window: data.bidding_window } : prev);
+      if (data.summary) setSummary(data.summary);
+      if (data.log) {
+        setLogs(prev => [...prev.slice(-49), data.log]);
+        showToast(data.log.title, data.log.message, data.log.severity || 'info');
+      }
+    });
+
     s.on('error:response', (data) => {
       showToast('Alert', data.message, 'critical');
     });
@@ -546,6 +555,28 @@ function MainApp() {
     }
   };
 
+  // Admin / Sourcing Action: Execute 5:00 AM Allocation & Lock
+  const handleTrigger5AmAllocation = async () => {
+    try {
+      if (socket) socket.emit('admin:trigger_5am_allocation');
+      await fetch('/api/bidding-window/lock', { method: 'POST' });
+      showToast('5:00 AM Allocation Executed', 'All supplier quotes evaluated under Lowest Price (L1) rules and locked.', 'success');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Admin / Sourcing Action: Reopen Bidding Window
+  const handleReopenBiddingWindow = async () => {
+    try {
+      if (socket) socket.emit('admin:reopen_bidding_window');
+      await fetch('/api/bidding-window/reopen', { method: 'POST' });
+      showToast('Bidding Window Reopened', 'Suppliers can now submit and adjust their price per kg.', 'info');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const activeVendorObj = (Array.isArray(vendors) && vendors.find(v => v && (
     v.id === currentVendorId || 
     (currentUser?.vendorId && v.id === currentUser.vendorId) || 
@@ -720,6 +751,8 @@ function MainApp() {
             onSaveCatalog={handleSaveCatalog}
             onUpdateVendorRatings={handleUpdateVendorRatings}
             onAddVendor={handleCreateVendor}
+            onTrigger5AmAllocation={handleTrigger5AmAllocation}
+            onReopenBiddingWindow={handleReopenBiddingWindow}
           />
         )}
 
@@ -739,6 +772,8 @@ function MainApp() {
               onSaveCatalog={handleSaveCatalog}
               onUpdateVendorRatings={handleUpdateVendorRatings}
               onAddVendor={handleCreateVendor}
+              onTrigger5AmAllocation={handleTrigger5AmAllocation}
+              onReopenBiddingWindow={handleReopenBiddingWindow}
             />
             <NotificationFeed logs={logs} />
           </div>

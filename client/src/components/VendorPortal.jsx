@@ -103,13 +103,16 @@ export default function VendorPortal({
     }
   };
 
+  // 5:00 AM Bidding Window State
+  const isWindowOpen = indent?.bidding_window ? indent.bidding_window.status === 'OPEN' : true;
+
   // Filter items: A vendor ONLY sees what is in their supply catalog!
   const mySuppliedSkus = Array.isArray(currentVendor?.supplied_skus) ? currentVendor.supplied_skus : [];
   const visibleItems = (indent?.items || []).filter(item => 
     mySuppliedSkus.length === 0 || mySuppliedSkus.includes(item.sku_code)
   );
 
-  // Find all awarded commitments for this vendor
+  // Find all awarded commitments for this vendor (L1 winning bids accepted after 5:00 AM)
   const myCommitments = (indent?.items || []).flatMap(item => {
     const myBid = (item.bids || []).find(b => b && b.vendor_id === currentVendor?.id && b.status === 'ACTIVE' && b.allocated_qty > 0);
     if (myBid) {
@@ -302,6 +305,45 @@ export default function VendorPortal({
         </div>
       </div>
 
+      {/* ⏰ 5:00 AM Bidding Window Status Banner */}
+      <div className={`rounded-3xl p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md ${
+        isWindowOpen 
+          ? 'bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border-emerald-500/40 text-emerald-300' 
+          : 'bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-amber-500/40 text-amber-300'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 ${
+            isWindowOpen ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+          }`}>
+            <Clock size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-white">
+                {isWindowOpen ? '🟢 Bidding Window Open (12:30 AM – 5:00 AM)' : '🔒 Bidding Window Closed (Locked at 5:00 AM)'}
+              </span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                isWindowOpen ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
+                {isWindowOpen ? 'Adjust Rates Anytime' : 'Allocations Finalized'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 mt-0.5">
+              {isWindowOpen 
+                ? 'The system waits until 5:00 AM to accept bids. You can freely adjust your rate and quantity anytime before 5:00 AM!'
+                : 'As clock hit 5:00 AM, the system approved lowest-price bids (L1). Quoted prices are now locked.'}
+            </p>
+          </div>
+        </div>
+
+        {isWindowOpen && (
+          <div className="text-right shrink-0 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/60">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Allocation Time</span>
+            <span className="text-xs font-mono font-bold text-emerald-400">05:00 AM IST</span>
+          </div>
+        )}
+      </div>
+
       {/* 1-to-1 Privacy & L1 Lowest Price Rule Note */}
       <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 text-xs text-slate-400 space-y-1">
         <div className="flex items-center gap-2 text-emerald-400 font-semibold">
@@ -309,12 +351,12 @@ export default function VendorPortal({
           <span>1-to-1 Least-Cost Allocation Engine</span>
         </div>
         <p className="text-[11px] leading-relaxed">
-          Requirements are segregated based on your supply catalogue. Quote your best competitive rate — the system automatically awards orders to the <strong>minimum price (L1)</strong>, with vendor ratings (Quality, Price, Fill Rate, Time of Delivery) used as tie-breakers.
+          Requirements are segregated based on your supply catalogue. Quote your best competitive rate — the system automatically awards orders to the <strong>minimum price (L1)</strong> at 5:00 AM, with vendor ratings (Quality, Price, Fill Rate, Time of Delivery) used as tie-breakers.
         </p>
       </div>
 
-      {/* My Confirmed Allocations Section */}
-      {myCommitments.length > 0 && (
+      {/* My Confirmed Allocations Section (Only after 5:00 AM window lock) */}
+      {!isWindowOpen && myCommitments.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -323,7 +365,7 @@ export default function VendorPortal({
                 Your Approved Commitments ({myCommitments.length})
               </h3>
             </div>
-            <span className="text-[11px] text-emerald-400 font-semibold">L1 Winning Bids</span>
+            <span className="text-[11px] text-emerald-400 font-semibold">Accepted at 5:00 AM</span>
           </div>
 
           <div className="space-y-2">
@@ -418,100 +460,138 @@ export default function VendorPortal({
                 </div>
               </div>
 
-              {/* My active bid status pill */}
+              {/* My quote status pill: handles Window OPEN vs LOCKED */}
               {myBid && (
-                <div className={`mt-2.5 text-xs rounded-xl p-2.5 flex items-center justify-between border ${
-                  myBid.allocated_qty > 0
-                    ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-                    : 'bg-amber-950/40 border-amber-500/30 text-amber-300'
-                }`}>
-                  <div>
-                    <span className="font-bold">
-                      {myBid.allocated_qty > 0 
-                        ? `🟢 L1 Awarded: ${myBid.allocated_qty} ${item.unit} @ ₹${myBid.quoted_rate}/${item.unit}` 
-                        : `🔴 Currently Outbid @ ₹${myBid.quoted_rate}/${item.unit}`}
-                    </span>
-                    <span className="block text-[10px] opacity-75 mt-0.5">
-                      {myBid.allocated_qty > 0 
-                        ? `Approved by system at lowest price.` 
-                        : `Another supplier offered a lower rate or higher rating.`}
-                    </span>
-                  </div>
+                isWindowOpen ? (
+                  <div className="mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border bg-blue-950/40 border-blue-500/40 text-blue-200 shadow-xs">
+                    <div>
+                      <div className="font-bold flex items-center gap-1.5 text-white">
+                        <span className="text-blue-400">📝 Your Submitted Quote:</span>
+                        <span className="text-emerald-400 font-bold font-mono">
+                          {myBid.quantity} {item.unit} @ ₹{myBid.quoted_rate}/{item.unit}
+                        </span>
+                      </div>
+                      <span className="block text-[11px] text-slate-300 mt-0.5">
+                        ⏳ Pending 5:00 AM allocation. You can adjust your price anytime before 5:00 AM!
+                      </span>
+                    </div>
 
-                  <button
-                    onClick={() => handleStartQuote(item)}
-                    className="text-xs text-white underline font-semibold ml-2"
-                  >
-                    Revise Quote
-                  </button>
-                </div>
+                    <button
+                      onClick={() => handleStartQuote(item)}
+                      className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl shadow-xs transition active:scale-95 ml-2 shrink-0 flex items-center gap-1"
+                    >
+                      <span>✏️ Adjust Price</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className={`mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border ${
+                    myBid.allocated_qty > 0
+                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                      : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                  }`}>
+                    <div>
+                      <span className="font-bold text-sm">
+                        {myBid.allocated_qty > 0 
+                          ? `🟢 Approved at 5:00 AM: ${myBid.allocated_qty} ${item.unit} @ ₹${myBid.quoted_rate}/${item.unit}` 
+                          : `🔴 Not Awarded at 5:00 AM: Quoted ₹${myBid.quoted_rate}/${item.unit}`}
+                      </span>
+                      <span className="block text-[11px] opacity-80 mt-0.5">
+                        {myBid.allocated_qty > 0 
+                          ? `Accepted by system under Lowest Price (L1) allocation.` 
+                          : `Another supplier offered a lower rate or higher vendor rating.`}
+                      </span>
+                    </div>
+
+                    {myBid.allocated_qty > 0 && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg font-bold">
+                        L1 Winner
+                      </span>
+                    )}
+                  </div>
+                )
               )}
 
               {/* Bidding / Action Area */}
               <div className="mt-3.5 pt-3 border-t border-slate-800/80">
-                {isSelected ? (
-                  <div className="space-y-3 bg-slate-800/50 p-3.5 rounded-2xl border border-slate-700/60">
-                    <div className="text-xs font-bold text-white flex items-center justify-between">
-                      <span>Submit Quote for {item.item_name}</span>
-                      <span className="text-slate-400 text-[11px]">Pluckk Target: ₹{item.target_rate}/{item.unit}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="text-[11px] text-slate-300 block mb-1">
-                          Your Price per {item.unit} (₹):
-                        </label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="1"
-                          placeholder="e.g. 25.00"
-                          value={quotedRate}
-                          onChange={(e) => setQuotedRate(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                        />
+                {isWindowOpen ? (
+                  isSelected ? (
+                    <div className="space-y-3 bg-slate-800/50 p-3.5 rounded-2xl border border-slate-700/60">
+                      <div className="text-xs font-bold text-white flex items-center justify-between">
+                        <span>{myBid ? `✏️ Adjust Quote for ${item.item_name}` : `Submit Quote for ${item.item_name}`}</span>
+                        <span className="text-slate-400 text-[11px]">Pluckk Target: ₹{item.target_rate}/{item.unit}</span>
                       </div>
 
-                      <div>
-                        <label className="text-[11px] text-slate-300 block mb-1">
-                          Quantity you can give ({item.unit}):
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          placeholder={`e.g. ${item.remaining_qty || 50}`}
-                          value={quotedQty}
-                          onChange={(e) => setQuotedQty(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                        />
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[11px] text-slate-300 block mb-1">
+                            Your Price per {item.unit} (₹):
+                          </label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="1"
+                            placeholder="e.g. 25.00"
+                            value={quotedRate}
+                            onChange={(e) => setQuotedRate(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] text-slate-300 block mb-1">
+                            Quantity you can give ({item.unit}):
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder={`e.g. ${item.remaining_qty || 50}`}
+                            value={quotedQty}
+                            onChange={(e) => setQuotedQty(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-slate-400">
+                          ⏱️ You can adjust again before 5:00 AM
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedSku(null)}
+                            className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleBidSubmit(item.sku_code)}
+                            disabled={!quotedRate || !quotedQty || parseFloat(quotedRate) <= 0 || parseFloat(quotedQty) <= 0}
+                            className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl shadow-sm transition"
+                          >
+                            {myBid ? 'Save Adjusted Price' : 'Submit Quote'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-end gap-2 pt-1">
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
                       <button
-                        onClick={() => setSelectedSku(null)}
-                        className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                        onClick={() => handleStartQuote(item)}
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition shadow-sm active:scale-98 flex items-center justify-center gap-1.5 ${
+                          myBid 
+                            ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700' 
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        }`}
                       >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleBidSubmit(item.sku_code)}
-                        disabled={!quotedRate || !quotedQty || parseFloat(quotedRate) <= 0 || parseFloat(quotedQty) <= 0}
-                        className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl shadow-sm transition"
-                      >
-                        Submit Quote
+                        <Check size={14} />
+                        <span>{myBid ? '✏️ Adjust Price / Quantity' : '📝 Quote Price & Quantity (Open till 5 AM)'}</span>
                       </button>
                     </div>
-                  </div>
+                  )
                 ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => handleStartQuote(item)}
-                      className="flex-1 py-2 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition shadow-sm active:scale-98 flex items-center justify-center gap-1.5"
-                    >
-                      <Check size={14} />
-                      <span>{myBid ? 'Update Quote / Quantity' : 'Quote Price & Quantity'}</span>
-                    </button>
+                  <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-400 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <Lock size={13} className="text-slate-500" />
+                    <span>Bidding window closed at 5:00 AM. Prices are locked.</span>
                   </div>
                 )}
               </div>

@@ -20,7 +20,9 @@ export default function AdminDashboard({
   skuMaster = [],
   onSaveCatalog,
   onUpdateVendorRatings,
-  onAddVendor
+  onAddVendor,
+  onTrigger5AmAllocation,
+  onReopenBiddingWindow
 }) {
   const [activeSubTab, setActiveSubTab] = useState('indent'); // 'indent', 'vendors', 'sku_master'
   const [searchTerm, setSearchTerm] = useState('');
@@ -201,6 +203,67 @@ export default function AdminDashboard({
             >
               <RefreshCw size={14} />
               <span>Reset</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ⏰ 5:00 AM Bidding Window Command & Control Bar */}
+      <div className={`p-4 sm:p-5 rounded-3xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm ${
+        indent?.bidding_window?.status === 'LOCKED'
+          ? 'bg-slate-900 border-amber-500/40 text-amber-200'
+          : 'bg-slate-900 border-emerald-500/40 text-emerald-200'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 ${
+            indent?.bidding_window?.status === 'LOCKED'
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+          }`}>
+            <Clock size={22} />
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">
+                {indent?.bidding_window?.status === 'LOCKED' 
+                  ? '🔒 5:00 AM Bidding Window: CLOSED & LOCKED' 
+                  : '🟢 5:00 AM Bidding Window: OPEN (Awaiting 5:00 AM)'}
+              </span>
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                indent?.bidding_window?.status === 'LOCKED'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse'
+              }`}>
+                {indent?.bidding_window?.status === 'LOCKED' ? 'Bids Locked' : 'Suppliers Can Adjust Quotes'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              {indent?.bidding_window?.status === 'LOCKED'
+                ? 'System evaluated all submitted quotes and locked allocations at 5:00 AM based on minimum price (L1) and vendor ratings.'
+                : 'Suppliers are submitting and adjusting quotes. System will wait till 5:00 AM to accept lowest pricing and lock allocations.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {indent?.bidding_window?.status === 'LOCKED' ? (
+            <button
+              onClick={onReopenBiddingWindow}
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition border border-slate-700 shadow-sm"
+              title="Reopen window so suppliers can quote or adjust prices again"
+            >
+              <RefreshCw size={14} />
+              <span>Reopen Bidding Window</span>
+            </button>
+          ) : (
+            <button
+              onClick={onTrigger5AmAllocation}
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 shadow-emerald-950/40"
+              title="Close window now, accept lowest-price bids (L1), and lock allocations"
+            >
+              <Zap size={14} />
+              <span>⚡ Execute 5:00 AM Allocation Now</span>
             </button>
           )}
         </div>

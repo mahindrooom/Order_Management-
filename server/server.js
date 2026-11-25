@@ -121,6 +121,15 @@ function createIndentFromItems(items, sourceTitle = 'Nightly Indent (12:30 AM)')
     generated_at: new Date().toISOString(),
     status: 'ACTIVE',
     unmatched_count: unmatched.length,
+    bidding_window: {
+      status: 'OPEN', // 'OPEN' | 'LOCKED'
+      opens_at: '12:30 AM',
+      closes_at: '05:00 AM',
+      target_time: '05:00:00',
+      locked_at: null,
+      allocated_at: null,
+      message: 'Bidding window open until 5:00 AM. Suppliers can submit and adjust quotes freely.'
+    },
     items: enriched.map(item => ({
       sku_code: item.sku_code,
       item_name: item.item_name,
@@ -146,6 +155,18 @@ let currentIndent = (savedIndent && savedIndent.items && savedIndent.items.lengt
   ? savedIndent
   : createIndentFromItems(defaultSampleItems);
 
+if (!currentIndent.bidding_window) {
+  currentIndent.bidding_window = {
+    status: 'OPEN',
+    opens_at: '12:30 AM',
+    closes_at: '05:00 AM',
+    target_time: '05:00:00',
+    locked_at: null,
+    allocated_at: null,
+    message: 'Bidding window open until 5:00 AM. Suppliers can submit and adjust quotes freely.'
+  };
+}
+
 const savedLogs = getSavedLogs();
 let auditLogs = (savedLogs && savedLogs.length > 0) ? savedLogs : [
   {
@@ -162,6 +183,144 @@ if (!savedIndent) {
   saveIndent(currentIndent);
   saveLogs(auditLogs);
 }
+
+// ================= 5:00 AM BIDDING WINDOW & L1 ALLOCATION ENGINE =================
+function execute5AmAllocation(source = 'MANUAL_ADMIN') {
+  if (!currentIndent || !currentIndent.items) return false;
+  if (currentIndent.bidding_window && currentIndent.bidding_window.status === 'LOCKED') {
+    return false; // Already locked
+  }
+
+  const allVendors = getVendors();
+
+  // Run Lowest Price (L1) greedy allocation with ratings tie-breaker on EVERY item
+  currentIndent.items.forEach(item => {
+    recalculateL1Allocations(item, allVendors);
+  });
+
+  currentIndent.bidding_window = {
+    status: 'LOCKED',
+    opens_at: '12:30 AM',
+    closes_at: '05:00 AM',
+    target_time: '05:00:00',
+    locked_at: new Date().toISOString(),
+    allocated_at: new Date().toISOString(),
+    source,
+    message: 'Bidding window closed at 5:00 AM. Lowest price (L1) allocation completed and locked.'
+  };
+
+  const summary = calculateSummary();
+
+  const log = {
+    id: 'log-' + Date.now(),
+    type: 'WINDOW_LOCKED_5AM',
+    title: '🔒 5:00 AM Bidding Window Closed — L1 Allocations Executed',
+    message: `5:00 AM reached (${source}). System evaluated all supplier quotes and finalized lowest-price (L1) allocations with 4-pillar vendor rating tie-breakers (${summary.fulfilled_skus}/${summary.total_skus} SKUs fulfilled).`,
+    timestamp: new Date().toISOString(),
+    severity: 'success',
+    emergency: false
+  };
+
+  auditLogs.push(log);
+  saveIndent(currentIndent);
+  saveLogs(auditLogs);
+
+  // Broadcast Web Push to mobile devices
+  broadcastClosedAppPush(
+    '🔒 5:00 AM Allocations Finalized',
+    'Bidding window has closed! The system has accepted winning bids based on L1 pricing. Tap to view your approved orders.',
+    { url: '/' }
+  );
+
+  io.emit('state:updated', {
+    indent: currentIndent,
+    summary,
+    log
+  });
+
+  io.emit('window:status_changed', {
+    bidding_window: currentIndent.bidding_window,
+    summary,
+    log
+  });
+
+  return true;
+}
+
+function reopenBiddingWindow() {
+  if (!currentIndent) return false;
+
+  currentIndent.bidding_window = {
+    status: 'OPEN',
+    opens_at: '12:30 AM',
+    closes_at: '05:00 AM',
+    target_time: '05:00:00',
+    locked_at: null,
+    allocated_at: null,
+    message: 'Bidding window reopened. Suppliers can adjust rates and quantities freely.'
+  };
+
+  // Reset allocations back to open bidding state awaiting 5 AM
+  currentIndent.items.forEach(item => {
+    item.allocated_qty = 0;
+    item.remaining_qty = item.required_qty;
+    item.status = 'OPEN';
+    item.allocations = [];
+    (item.bids || []).forEach(b => {
+      b.allocated_qty = 0;
+      b.allocation_status = 'PENDING_5AM';
+    });
+  });
+
+  const summary = calculateSummary();
+  const log = {
+    id: 'log-' + Date.now(),
+    type: 'WINDOW_REOPENED',
+    title: '🟢 Bidding Window Reopened',
+    message: 'Bidding window reopened until 5:00 AM. Suppliers can submit and adjust quotes.',
+    timestamp: new Date().toISOString(),
+    severity: 'info'
+  };
+
+  auditLogs.push(log);
+  saveIndent(currentIndent);
+  saveLogs(auditLogs);
+
+  io.emit('state:updated', {
+    indent: currentIndent,
+    summary,
+    log
+  });
+
+  io.emit('window:status_changed', {
+    bidding_window: currentIndent.bidding_window,
+    summary,
+    log
+  });
+
+  return true;
+}
+
+// Background Clock Checker for 5:00 AM IST Automatic Execution
+let lastAllocatedDate = null;
+setInterval(() => {
+  if (!currentIndent || !currentIndent.bidding_window || currentIndent.bidding_window.status !== 'OPEN') {
+    return;
+  }
+  const now = new Date();
+  // IST is UTC + 5:30
+  const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  const hours = istTime.getUTCHours();
+  const minutes = istTime.getUTCMinutes();
+  const todayDateStr = istTime.toISOString().slice(0, 10);
+
+  // If clock hits 5:00 AM IST (between 05:00 and 05:02) and not already executed today
+  if (hours === 5 && minutes <= 2 && lastAllocatedDate !== todayDateStr) {
+    lastAllocatedDate = todayDateStr;
+    console.log('[Timer] 5:00 AM IST reached. Executing automatic 5 AM L1 allocation.');
+    execute5AmAllocation('AUTO_CLOCK_5AM');
+  }
+}, 15000);
 
 function calculateSummary() {
   if (!currentIndent || !currentIndent.items) {
@@ -518,6 +677,17 @@ app.post('/api/notifications/subscribe', (req, res) => {
   res.json({ success: true });
 });
 
+// Bidding window control endpoints (5:00 AM Allocation Execution & Reopen)
+app.post('/api/bidding-window/lock', (req, res) => {
+  const success = execute5AmAllocation('MANUAL_ADMIN');
+  res.json({ success, bidding_window: currentIndent?.bidding_window });
+});
+
+app.post('/api/bidding-window/reopen', (req, res) => {
+  const success = reopenBiddingWindow();
+  res.json({ success, bidding_window: currentIndent?.bidding_window });
+});
+
 app.post('/api/upload-indent', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -661,7 +831,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 1. Vendor Submits a Quote / Price & Quantity Bid
+  // 1. Vendor Submits or Adjusts a Quote during Bidding Window (Before 5:00 AM)
   socket.on('vendor:submit_bid', (payload) => {
     const { vendor_id, vendor_name, sku_code, quantity, quoted_rate } = payload;
     const qty = parseFloat(quantity);
@@ -671,6 +841,13 @@ io.on('connection', (socket) => {
       return socket.emit('error:response', { message: 'Please enter valid quantity and price per kg' });
     }
 
+    const isWindowOpen = currentIndent.bidding_window ? currentIndent.bidding_window.status === 'OPEN' : true;
+    if (!isWindowOpen) {
+      return socket.emit('error:response', { 
+        message: 'The 5:00 AM bidding window has closed. All quotations are locked.' 
+      });
+    }
+
     const item = currentIndent.items.find(i => i.sku_code === sku_code);
     if (!item) {
       return socket.emit('error:response', { message: 'SKU not found in active indent' });
@@ -678,13 +855,17 @@ io.on('connection', (socket) => {
 
     if (!item.bids) item.bids = [];
 
-    // Find existing bid from this vendor for this SKU
+    // Check if this is an adjustment or first quote
     let existingBid = item.bids.find(b => b.vendor_id === vendor_id);
+    const isAdjustment = Boolean(existingBid);
+
     if (existingBid) {
       existingBid.quantity = qty;
       existingBid.quoted_rate = rate;
       existingBid.timestamp = new Date().toISOString();
       existingBid.status = 'ACTIVE';
+      existingBid.allocation_status = 'PENDING_5AM';
+      existingBid.allocated_qty = 0;
     } else {
       existingBid = {
         id: 'bid-' + vendor_id + '-' + Date.now(),
@@ -693,52 +874,27 @@ io.on('connection', (socket) => {
         quantity: qty,
         quoted_rate: rate,
         timestamp: new Date().toISOString(),
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        allocation_status: 'PENDING_5AM',
+        allocated_qty: 0
       };
       item.bids.push(existingBid);
     }
 
-    // Re-run Lowest Price (L1) Greedy Allocation with Rating Tie-Breaker
-    const allVendors = getVendors();
-    recalculateL1Allocations(item, allVendors);
-
-    const isFullNow = item.remaining_qty === 0;
-    const isAwarded = existingBid.allocated_qty > 0;
-
     const log = {
       id: 'log-' + Date.now(),
-      type: isAwarded ? 'BID_AWARDED' : 'BID_OUTBID',
-      title: isAwarded 
-        ? `📢 Requirement Update: ${item.item_name} (${item.remaining_qty} ${item.unit} Left)` 
-        : `⚠️ Outbid Notice: ${item.item_name}`,
-      message: isAwarded
-        ? `${vendor_name} locked ${existingBid.allocated_qty} ${item.unit}. Remaining open requirement: ${item.remaining_qty} ${item.unit} (Target: ₹${item.target_rate}/${item.unit}).`
-        : `${vendor_name} quoted ₹${rate}/${item.unit}. Currently outbid by lower-rate suppliers.`,
+      type: isAdjustment ? 'BID_ADJUSTED' : 'BID_SUBMITTED',
+      title: isAdjustment 
+        ? `✏️ Quote Adjusted: ${item.item_name}` 
+        : `📝 Quote Submitted: ${item.item_name}`,
+      message: `${vendor_name} ${isAdjustment ? 'adjusted quote to' : 'submitted quote of'} ₹${rate}/${item.unit} for ${qty} ${item.unit}. (Window open until 5:00 AM).`,
       timestamp: new Date().toISOString(),
-      severity: isAwarded ? (isFullNow ? 'success' : 'warning') : 'warning',
+      severity: 'info',
       sku_code: item.sku_code
     };
     auditLogs.push(log);
     saveIndent(currentIndent);
     saveLogs(auditLogs);
-
-    if (isAwarded) {
-      broadcastClosedAppPush(
-        `📢 Requirement Update: ${item.item_name}`,
-        `${vendor_name} locked ${existingBid.allocated_qty} ${item.unit}. Only ${item.remaining_qty} ${item.unit} remaining!`,
-        { sku_code: item.sku_code, url: '/' }
-      );
-    }
-    saveIndent(currentIndent);
-    saveLogs(auditLogs);
-
-    if (isAwarded) {
-      broadcastClosedAppPush(
-        `📢 Requirement Update: ${item.item_name}`,
-        `${vendor_name} locked ${existingBid.allocated_qty} ${item.unit}. Only ${item.remaining_qty} ${item.unit} remaining!`,
-        { sku_code: item.sku_code, url: '/' }
-      );
-    }
 
     io.emit('sku:updated', {
       sku: item,
@@ -747,11 +903,10 @@ io.on('connection', (socket) => {
       vendor_action: {
         vendor_id,
         vendor_name,
-        action: 'BID',
+        action: isAdjustment ? 'BID_ADJUSTED' : 'BID_SUBMITTED',
         quoted_rate: rate,
-        allocated_qty: existingBid.allocated_qty,
-        allocation_status: existingBid.allocation_status,
-        remaining_qty: item.remaining_qty
+        quantity: qty,
+        is_adjustment: isAdjustment
       }
     });
   });
@@ -850,6 +1005,15 @@ io.on('connection', (socket) => {
       target_rate: item.target_rate,
       log
     });
+  });
+
+  // 4. Admin / Sourcing 5:00 AM Bidding Window Actions
+  socket.on('admin:trigger_5am_allocation', () => {
+    execute5AmAllocation('MANUAL_ADMIN');
+  });
+
+  socket.on('admin:reopen_bidding_window', () => {
+    reopenBiddingWindow();
   });
 });
 
