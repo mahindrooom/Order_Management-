@@ -6,11 +6,19 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+const webpush = require('web-push');
 const { 
   readDb, 
   writeDb, 
   initMongo,
   getDbStatus,
+  getSavedIndent,
+  saveIndent,
+  getSavedLogs,
+  saveLogs,
+  getSubscriptions,
+  saveSubscription,
+  removeSubscription,
   evaluateRole, 
   matchAndEnrichItems, 
   recalculateL1Allocations,
@@ -20,6 +28,49 @@ const {
 
 const app = express();
 const server = http.createServer(app);
+
+// Configure Web Push VAPID for Closed App Mobile Notifications
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BMzYFaTaF6oMdeiD3s_EjSvvTd1g-GluWb0nYQBmxDB3IiaRE0F_Ir3uKoW-AyShehM9_q2D47K9yPRRVEYziqw';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'w8aJho5jZfwu9aQyKBJMpSE2FF2OlCuBjegZPT9KR54';
+
+try {
+  webpush.setVapidDetails(
+    'mailto:om.mahindroo@pluckk.co.in',
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+  console.log('[WebPush] VAPID keys initialized for background mobile notifications');
+} catch (err) {
+  console.error('[WebPush] VAPID error:', err.message);
+}
+
+// Broadcast real push notification to mobile phones even when browser/app is closed
+async function broadcastClosedAppPush(title, message, payload = {}) {
+  const subscriptions = getSubscriptions();
+  if (!subscriptions || subscriptions.length === 0) return;
+
+  const pushPayload = JSON.stringify({
+    title,
+    message,
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    url: payload.url || '/',
+    tag: 'pluckk-alert-' + Date.now(),
+    timestamp: Date.now()
+  });
+
+  const promises = subscriptions.map(async (sub) => {
+    try {
+      await webpush.sendNotification(sub, pushPayload);
+    } catch (err) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        removeSubscription(sub.endpoint);
+      }
+    }
+  });
+
+  await Promise.allSettled(promises);
+}
 
 // Initialize DB (Connects to MongoDB Atlas if MONGODB_URI is provided, otherwise falls back to local JSON store)
 initMongo().catch(err => console.error('[DB] Mongo init error:', err));
@@ -90,8 +141,13 @@ function createIndentFromItems(items, sourceTitle = 'Nightly Indent (12:30 AM)')
   };
 }
 
-let currentIndent = createIndentFromItems(defaultSampleItems);
-let auditLogs = [
+const savedIndent = getSavedIndent();
+let currentIndent = (savedIndent && savedIndent.items && savedIndent.items.length > 0)
+  ? savedIndent
+  : createIndentFromItems(defaultSampleItems);
+
+const savedLogs = getSavedLogs();
+let auditLogs = (savedLogs && savedLogs.length > 0) ? savedLogs : [
   {
     id: 'log-0',
     type: 'SYSTEM',
@@ -101,6 +157,11 @@ let auditLogs = [
     severity: 'info'
   }
 ];
+
+if (!savedIndent) {
+  saveIndent(currentIndent);
+  saveLogs(auditLogs);
+}
 
 function calculateSummary() {
   if (!currentIndent || !currentIndent.items) {
@@ -426,6 +487,8 @@ app.post('/api/reset', (req, res) => {
     severity: 'info'
   };
   auditLogs.push(log);
+  saveIndent(currentIndent);
+  saveLogs(auditLogs);
 
   io.emit('state:updated', {
     indent: currentIndent,
@@ -434,6 +497,25 @@ app.post('/api/reset', (req, res) => {
   });
 
   res.json({ success: true, indent: currentIndent });
+});
+
+// Web Push VAPID endpoints for background mobile notifications
+app.get('/api/notifications/vapid-public-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/notifications/subscribe', (req, res) => {
+  const { subscription, vendor_id, user_email } = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Subscription required' });
+  }
+  saveSubscription({
+    ...subscription,
+    vendor_id: vendor_id || null,
+    user_email: user_email || null,
+    subscribed_at: new Date().toISOString()
+  });
+  res.json({ success: true });
 });
 
 app.post('/api/upload-indent', upload.single('file'), (req, res) => {
@@ -461,6 +543,13 @@ app.post('/api/upload-indent', upload.single('file'), (req, res) => {
         severity: 'info'
       };
       auditLogs.push(log);
+      saveIndent(currentIndent);
+      saveLogs(auditLogs);
+      broadcastClosedAppPush(
+        '🥬 Pluckk Night Indent Released',
+        `Daily fresh produce indent released with ${currentIndent.items.length} items. Open to check your catalogue requirements!`,
+        { url: '/' }
+      );
 
       io.emit('state:updated', {
         indent: currentIndent,
@@ -506,6 +595,13 @@ app.post('/api/upload-indent', upload.single('file'), (req, res) => {
         severity: 'info'
       };
       auditLogs.push(log);
+      saveIndent(currentIndent);
+      saveLogs(auditLogs);
+      broadcastClosedAppPush(
+        '🥬 Pluckk Night Indent Released',
+        `Daily fresh produce indent released with ${currentIndent.items.length} items. Open to check your catalogue requirements!`,
+        { url: '/' }
+      );
 
       io.emit('state:updated', {
         indent: currentIndent,
@@ -623,6 +719,26 @@ io.on('connection', (socket) => {
       sku_code: item.sku_code
     };
     auditLogs.push(log);
+    saveIndent(currentIndent);
+    saveLogs(auditLogs);
+
+    if (isAwarded) {
+      broadcastClosedAppPush(
+        `📢 Requirement Update: ${item.item_name}`,
+        `${vendor_name} locked ${existingBid.allocated_qty} ${item.unit}. Only ${item.remaining_qty} ${item.unit} remaining!`,
+        { sku_code: item.sku_code, url: '/' }
+      );
+    }
+    saveIndent(currentIndent);
+    saveLogs(auditLogs);
+
+    if (isAwarded) {
+      broadcastClosedAppPush(
+        `📢 Requirement Update: ${item.item_name}`,
+        `${vendor_name} locked ${existingBid.allocated_qty} ${item.unit}. Only ${item.remaining_qty} ${item.unit} remaining!`,
+        { sku_code: item.sku_code, url: '/' }
+      );
+    }
 
     io.emit('sku:updated', {
       sku: item,
@@ -678,6 +794,14 @@ io.on('connection', (socket) => {
       emergency: true
     };
     auditLogs.push(log);
+    saveIndent(currentIndent);
+    saveLogs(auditLogs);
+
+    broadcastClosedAppPush(
+      `🚨 SHORTFALL ALERT: ${item.item_name}`,
+      `${vendor_name} released ${actualDrop} ${item.unit}! Reopened for bidding. Tap to supply.`,
+      { sku_code: item.sku_code, url: '/' }
+    );
 
     io.emit('sku:updated', {
       sku: item,
@@ -709,6 +833,14 @@ io.on('connection', (socket) => {
       sku_code: item.sku_code
     };
     auditLogs.push(log);
+    saveIndent(currentIndent);
+    saveLogs(auditLogs);
+
+    broadcastClosedAppPush(
+      `🚨 MANDI SOS: ${item.item_name}`,
+      `Pluckk urgently needs ${item.remaining_qty} ${item.unit}! Target rate: ₹${item.target_rate}/${item.unit}. Submit quote now!`,
+      { sku_code: item.sku_code, url: '/' }
+    );
 
     io.emit('notification:sos', {
       sku_code: item.sku_code,

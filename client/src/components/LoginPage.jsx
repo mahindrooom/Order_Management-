@@ -34,9 +34,9 @@ export default function LoginPage({ onLoginSuccess }) {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store in localStorage
-      localStorage.setItem('pluckk_user', JSON.stringify(data.user));
-      localStorage.setItem('pluckk_token', data.token);
+      // Store in sessionStorage for multi-tab isolation (each tab can test a separate role/vendor)
+      sessionStorage.setItem('pluckk_user', JSON.stringify(data.user));
+      sessionStorage.setItem('pluckk_token', data.token);
 
       onLoginSuccess(data.user);
     } catch (err) {

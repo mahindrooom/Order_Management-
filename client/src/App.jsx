@@ -6,10 +6,11 @@ import SplitViewSimulator from './components/SplitViewSimulator';
 import NotificationFeed from './components/NotificationFeed';
 import UploadModal from './components/UploadModal';
 import LoginPage from './components/LoginPage';
+import VendorCatalogModal from './components/VendorCatalogModal';
 import { 
   Building2, Smartphone, SplitSquareVertical, Bell, 
   Wifi, WifiOff, AlertTriangle, CheckCircle2, ShieldAlert,
-  Layers, RefreshCw, LogOut, ShieldCheck, User, Award, ShoppingCart, Database
+  Layers, RefreshCw, LogOut, ShieldCheck, User, Award, ShoppingCart, Database, Package
 } from 'lucide-react';
 
 const SOCKET_URL = undefined;
@@ -61,7 +62,7 @@ class ErrorBoundary extends React.Component {
 function MainApp() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('pluckk_user');
+      const saved = sessionStorage.getItem('pluckk_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -73,6 +74,7 @@ function MainApp() {
   const [dbStatus, setDbStatus] = useState({ connected: false, type: 'Local JSON Store' });
   const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'admin', 'vendor'
   const [currentVendorId, setCurrentVendorId] = useState('v1');
+  const [isVendorCatalogModalOpen, setIsVendorCatalogModalOpen] = useState(false);
   
   const [indent, setIndent] = useState(null);
   const [vendors, setVendors] = useState([]);
@@ -122,9 +124,55 @@ function MainApp() {
     fetchDbStatus();
   }, []);
 
+  // Subscribe to real background Web Push notifications for closed-app mobile delivery
+  const registerWebPush = async (user) => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (!reg || !reg.pushManager) return;
+
+      const res = await fetch('/api/notifications/vapid-public-key');
+      if (!res.ok) return;
+      const { publicKey } = await res.json();
+      if (!publicKey) return;
+
+      const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
+      const base64 = (publicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: outputArray
+        });
+      }
+
+      await fetch('/api/notifications/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub,
+          vendor_id: user?.vendorId || null,
+          user_email: user?.email || null
+        })
+      });
+      console.log('[WebPush] Active subscription registered with server');
+    } catch (e) {
+      console.log('[WebPush] Registration note:', e.message);
+    }
+  };
+
   // Lock active tab based on role
   useEffect(() => {
     if (currentUser) {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        registerWebPush(currentUser);
+      }
       if (isVendor) {
         setActiveTab('vendor');
         if (currentUser.vendorId) {
@@ -355,8 +403,8 @@ function MainApp() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('pluckk_user');
-    localStorage.removeItem('pluckk_token');
+    sessionStorage.removeItem('pluckk_user');
+    sessionStorage.removeItem('pluckk_token');
     setCurrentUser(null);
   };
 
@@ -410,7 +458,7 @@ function MainApp() {
         if (currentUser && currentUser.role === 'VENDOR') {
           const updatedUser = { ...currentUser, vendorId: data.vendor.id };
           setCurrentUser(updatedUser);
-          localStorage.setItem('pluckk_user', JSON.stringify(updatedUser));
+          sessionStorage.setItem('pluckk_user', JSON.stringify(updatedUser));
           setCurrentVendorId(data.vendor.id);
         }
         showToast(`Supply catalogue saved! (${supplied_skus.length} articles active)`, 'success');
@@ -498,6 +546,17 @@ function MainApp() {
     }
   };
 
+  const activeVendorObj = (Array.isArray(vendors) && vendors.find(v => v && (
+    v.id === currentVendorId || 
+    (currentUser?.vendorId && v.id === currentUser.vendorId) || 
+    (currentUser?.email && v.email && v.email.toLowerCase() === currentUser.email.toLowerCase())
+  ))) || (Array.isArray(vendors) && vendors[0]) || {
+    id: currentUser?.vendorId || currentVendorId || 'v1',
+    name: currentUser?.name || 'Verified Supplier',
+    email: currentUser?.email || 'vendor@pluckk.partner',
+    supplied_skus: ['PLK-VEG-POT-01', 'PLK-VEG-ONI-02', 'PLK-VEG-TOM-03']
+  };
+
   if (!currentUser) {
     return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
@@ -571,9 +630,24 @@ function MainApp() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-blue-950/40 border border-blue-500/30 px-3 py-1 rounded-xl text-xs text-blue-300">
-              <ShieldCheck size={14} className="text-blue-400" />
-              <span className="font-semibold">1-to-1 Supplier Mode</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-blue-950/40 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs text-blue-300">
+                <ShieldCheck size={14} className="text-blue-400" />
+                <span className="font-semibold">1-to-1 Supplier Mode</span>
+              </div>
+
+              {/* 📦 TOP-RIGHT MY SUPPLY CATALOGUE BUTTON (Directly as circled in user's screenshot) */}
+              <button
+                onClick={() => setIsVendorCatalogModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 border border-emerald-500/40"
+                title="Manage what articles you supply to Pluckk"
+              >
+                <Package size={14} />
+                <span>My Supply Catalogue</span>
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
+                  {activeVendorObj.supplied_skus?.length || 0}
+                </span>
+              </button>
             </div>
           )}
 
@@ -734,6 +808,18 @@ function MainApp() {
           showToast('New Indent uploaded & broadcasted to matching suppliers!', 'success');
         }}
       />
+
+      {/* Top Header Vendor Supply Catalog Modal */}
+      {isVendorCatalogModalOpen && (
+        <VendorCatalogModal
+          isOpen={isVendorCatalogModalOpen}
+          onClose={() => setIsVendorCatalogModalOpen(false)}
+          vendor={activeVendorObj}
+          currentUser={currentUser}
+          skuMaster={skuMaster}
+          onSaveCatalog={handleSaveCatalog}
+        />
+      )}
     </div>
   );
 }

@@ -127,9 +127,31 @@ const UserSchema = new mongoose.Schema({
   created_at: String
 });
 
+const IndentSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: String,
+  generated_at: String,
+  status: String,
+  unmatched_count: Number,
+  items: Array
+}, { timestamps: true });
+
+const SubscriptionSchema = new mongoose.Schema({
+  endpoint: { type: String, required: true, unique: true },
+  keys: {
+    p256dh: String,
+    auth: String
+  },
+  vendor_id: String,
+  user_email: String,
+  subscribed_at: String
+});
+
 const SkuModel = mongoose.models.SkuMaster || mongoose.model('SkuMaster', SkuSchema);
 const VendorModel = mongoose.models.Vendor || mongoose.model('Vendor', VendorSchema);
 const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
+const IndentModel = mongoose.models.Indent || mongoose.model('Indent', IndentSchema);
+const SubscriptionModel = mongoose.models.Subscription || mongoose.model('Subscription', SubscriptionSchema);
 
 async function initMongo() {
   if (!MONGODB_URI) {
@@ -198,10 +220,69 @@ function syncMongo(data) {
           await UserModel.findOneAndUpdate({ id: u.id }, u, { upsert: true });
         }
       }
+      if (data.currentIndent && data.currentIndent.id) {
+        await IndentModel.findOneAndUpdate({ id: data.currentIndent.id }, data.currentIndent, { upsert: true });
+      }
+      if (data.subscriptions && data.subscriptions.length) {
+        for (const sub of data.subscriptions) {
+          await SubscriptionModel.findOneAndUpdate({ endpoint: sub.endpoint }, sub, { upsert: true });
+        }
+      }
     } catch (err) {
       console.error('[DB] Async MongoDB sync error:', err.message);
     }
   });
+}
+
+// ================= INDENT & NOTIFICATION PERSISTENCE =================
+function getSavedIndent() {
+  const db = readDb();
+  return db.currentIndent || null;
+}
+
+function saveIndent(indent) {
+  if (!indent) return;
+  const db = readDb();
+  db.currentIndent = indent;
+  writeDb(db);
+}
+
+function getSavedLogs() {
+  const db = readDb();
+  return Array.isArray(db.auditLogs) ? db.auditLogs : [];
+}
+
+function saveLogs(logs) {
+  if (!Array.isArray(logs)) return;
+  const db = readDb();
+  db.auditLogs = logs.slice(-50);
+  writeDb(db);
+}
+
+function getSubscriptions() {
+  const db = readDb();
+  return Array.isArray(db.subscriptions) ? db.subscriptions : [];
+}
+
+function saveSubscription(sub) {
+  if (!sub || !sub.endpoint) return;
+  const db = readDb();
+  if (!Array.isArray(db.subscriptions)) db.subscriptions = [];
+  const idx = db.subscriptions.findIndex(s => s.endpoint === sub.endpoint);
+  if (idx >= 0) {
+    db.subscriptions[idx] = sub;
+  } else {
+    db.subscriptions.push(sub);
+  }
+  writeDb(db);
+}
+
+function removeSubscription(endpoint) {
+  if (!endpoint) return;
+  const db = readDb();
+  if (!Array.isArray(db.subscriptions)) return;
+  db.subscriptions = db.subscriptions.filter(s => s.endpoint !== endpoint);
+  writeDb(db);
 }
 
 function getDbStatus() {
@@ -225,6 +306,9 @@ function getCompositeRating(ratings) {
 const defaultDb = {
   skuMaster: initialSkuMaster,
   vendors: initialVendors,
+  currentIndent: null,
+  auditLogs: [],
+  subscriptions: [],
   users: [
     {
       id: 'usr-admin-1',
@@ -489,6 +573,13 @@ module.exports = {
   writeDb,
   initMongo,
   getDbStatus,
+  getSavedIndent,
+  saveIndent,
+  getSavedLogs,
+  saveLogs,
+  getSubscriptions,
+  saveSubscription,
+  removeSubscription,
   ADMIN_EMAILS,
   evaluateRole,
   initialSkuMaster,
