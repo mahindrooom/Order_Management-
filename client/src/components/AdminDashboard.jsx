@@ -3,7 +3,8 @@ import {
   TrendingUp, AlertTriangle, CheckCircle2, Clock, 
   Send, RefreshCw, Upload, Download, Bell, ShieldAlert,
   Search, Filter, ChevronRight, UserCheck, XCircle, Database, Plus, Check,
-  Package, Star, Award, Layers, Users, Edit3, List, LayoutGrid, Phone, Mail, UserPlus, X, ShieldCheck, MessageSquare
+  Package, Star, Award, Layers, Users, Edit3, List, LayoutGrid, Phone, Mail, UserPlus, X, ShieldCheck, MessageSquare,
+  Zap
 } from 'lucide-react';
 import VendorCatalogModal from './VendorCatalogModal';
 
@@ -22,12 +23,15 @@ export default function AdminDashboard({
   onUpdateVendorRatings,
   onAddVendor,
   onTrigger5AmAllocation,
-  onReopenBiddingWindow
+  onReopenBiddingWindow,
+  onInitiateFFF,
+  onReviewFFF
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('indent'); // 'indent', 'vendors', 'sku_master'
+  const [activeSubTab, setActiveSubTab] = useState('indent'); // 'indent', 'fastest_finger', 'vendors', 'sku_master'
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [fffTabFilter, setFffTabFilter] = useState('ALL');
 
   // Vendor Catalog & Directory state
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
@@ -139,6 +143,24 @@ export default function AdminDashboard({
   });
 
   const categories = ['ALL', ...new Set((indent?.items || []).map(i => i.category))];
+
+  const unfulfilledItems = (indent?.items || []).filter(item => item.remaining_qty > 0);
+  const activeFffItems = (indent?.items || []).filter(item => item.round2_fff?.status === 'ACTIVE' && item.remaining_qty > 0);
+  const fulfilledItems = (indent?.items || []).filter(item => item.remaining_qty === 0);
+
+  const allFffApplications = (indent?.items || []).flatMap(item => {
+    return (item.round2_fff?.applications || []).map(app => ({
+      ...app,
+      sku_code: item.sku_code,
+      item_name: item.item_name,
+      category: item.category,
+      unit: item.unit,
+      target_rate: item.target_rate,
+      remaining_qty: item.remaining_qty
+    }));
+  }).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const pendingFffCount = allFffApplications.filter(a => a.status === 'PENDING_APPROVAL').length;
 
   return (
     <div className="space-y-6">
@@ -369,6 +391,31 @@ export default function AdminDashboard({
           <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px]">
             {indent?.items?.length || 0}
           </span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('fastest_finger')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            activeSubTab === 'fastest_finger'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'text-amber-300 hover:text-white bg-amber-950/20 border border-amber-500/30'
+          }`}
+        >
+          <Zap size={14} className={pendingFffCount > 0 ? 'animate-bounce text-amber-300' : 'text-amber-400'} />
+          <span>⚡ 5 AM Shortfalls & Fastest Finger (Round 2)</span>
+          {pendingFffCount > 0 ? (
+            <span className="px-2 py-0.5 bg-red-600 text-white animate-pulse rounded-full text-[10px] font-bold">
+              {pendingFffCount} Pending Review
+            </span>
+          ) : unfulfilledItems.length > 0 ? (
+            <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-[10px]">
+              {unfulfilledItems.length} Shortfalls
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full text-[10px]">
+              100% Fulfilled
+            </span>
+          )}
         </button>
 
         <button
@@ -635,6 +682,409 @@ export default function AdminDashboard({
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: 5 AM Shortfalls & Fastest Finger (Round 2) */}
+      {activeSubTab === 'fastest_finger' && (
+        <div className="space-y-6">
+          {/* Executive Round 2 Banner */}
+          <div className="bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border border-amber-500/40 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <Zap size={24} className="animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>5:00 AM Shortfall Resolution & Fastest Finger First (Round 2)</span>
+                  </h3>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                    Round 2 Live
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  As the clock hits 5:00 AM, primary lowest-price (L1) bids are locked. Unfulfilled items below can be re-initiated for <strong>Fastest Finger First</strong>. Any supplier who applies first appears in Chart 2 with millisecond precision for instant <strong>Accept</strong> or <strong>Reject</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              {unfulfilledItems.length > 0 && (
+                <button
+                  onClick={() => onInitiateFFF && onInitiateFFF(null)}
+                  className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-2xl text-xs shadow-md transition flex items-center gap-2 active:scale-95"
+                >
+                  <Zap size={15} />
+                  <span>⚡ Re-initiate All {unfulfilledItems.length} Shortfalls (FFF)</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Indent Articles</span>
+              <span className="text-2xl font-black text-white mt-1 block">{(indent?.items || []).length}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block">Fulfilled at 5:00 AM</span>
+              <span className="text-2xl font-black text-emerald-400 mt-1 block">{fulfilledItems.length} articles</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block">Unfulfilled Shortfalls</span>
+              <span className="text-2xl font-black text-amber-400 mt-1 block">{unfulfilledItems.length} articles</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <span className="text-[11px] font-semibold text-cyan-400 uppercase tracking-wider block">Live FFF Queue</span>
+              <span className="text-2xl font-black text-cyan-400 mt-1 block">{allFffApplications.length} applications</span>
+            </div>
+          </div>
+
+          {/* CHART 1: 5 AM Fulfillment & Shortfall Re-initiation Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm space-y-4 p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>📊 Chart 1: 5 AM Fulfillment Status & Shortfall List</span>
+                  <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">
+                    Primary 5 AM Allocations
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Shows fulfilled articles vs remaining shortfall needed. Click "Re-initiate Bid" to reopen the fastest finger window for any item.
+                </p>
+              </div>
+
+              {/* Status Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                {['ALL', 'SHORTFALLS', 'ACTIVE_FFF', 'FULFILLED'].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFffTabFilter(f)}
+                    className={`px-3 py-1 rounded-lg font-semibold transition ${
+                      fffTabFilter === f
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {f === 'ALL' ? 'All Articles' : f === 'SHORTFALLS' ? `Shortfalls (${unfulfilledItems.length})` : f === 'ACTIVE_FFF' ? `Active FFF (${activeFffItems.length})` : `100% Fulfilled (${fulfilledItems.length})`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                    <th className="py-3 px-3">Article & SKU</th>
+                    <th className="py-3 px-3">Category</th>
+                    <th className="py-3 px-3 text-right">Target Demand</th>
+                    <th className="py-3 px-3 text-right">5 AM Allocated</th>
+                    <th className="py-3 px-3 text-right">Shortfall Needed</th>
+                    <th className="py-3 px-3 text-right">Benchmark Rate</th>
+                    <th className="py-3 px-3 text-center">Round 2 Status</th>
+                    <th className="py-3 px-3 text-right">Fastest Finger Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {(indent?.items || [])
+                    .filter(item => {
+                      if (fffTabFilter === 'SHORTFALLS') return item.remaining_qty > 0;
+                      if (fffTabFilter === 'ACTIVE_FFF') return item.round2_fff?.status === 'ACTIVE' && item.remaining_qty > 0;
+                      if (fffTabFilter === 'FULFILLED') return item.remaining_qty === 0;
+                      return true;
+                    })
+                    .map((item) => {
+                      const isFulfilled = item.remaining_qty === 0;
+                      const isFffActive = item.round2_fff?.status === 'ACTIVE';
+                      const fffApps = item.round2_fff?.applications || [];
+
+                      return (
+                        <tr key={item.sku_code} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3.5 px-3">
+                            <span className="font-bold text-white text-sm block">{item.item_name}</span>
+                            <span className="text-[11px] text-slate-500 font-mono">{item.sku_code}</span>
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-medium text-slate-300">
+                            {item.required_qty} {item.unit}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-bold text-emerald-400">
+                            {item.allocated_qty || 0} {item.unit}
+                          </td>
+                          <td className="py-3.5 px-3 text-right">
+                            {isFulfilled ? (
+                              <span className="text-emerald-400 font-semibold flex items-center justify-end gap-1">
+                                <CheckCircle2 size={13} /> Fulfilled
+                              </span>
+                            ) : (
+                              <span className="text-red-400 font-bold bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-lg">
+                                {item.remaining_qty} {item.unit} Shortfall
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono font-medium text-slate-300">
+                            ₹{item.target_rate}/{item.unit}
+                          </td>
+                          <td className="py-3.5 px-3 text-center">
+                            {isFulfilled ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                100% Closed
+                              </span>
+                            ) : isFffActive ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                                ⚡ FFF ACTIVE ({fffApps.length} in queue)
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                                Idle (Waiting Sourcing)
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-3 text-right">
+                            {isFulfilled ? (
+                              <span className="text-xs text-slate-500 italic">No action needed</span>
+                            ) : isFffActive ? (
+                              <button
+                                onClick={() => onInitiateFFF && onInitiateFFF(item.sku_code)}
+                                className="px-3 py-1.5 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl transition"
+                                title="Re-broadcast announcement to suppliers"
+                              >
+                                ⚡ Re-alert Suppliers ({fffApps.length})
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onInitiateFFF && onInitiateFFF(item.sku_code)}
+                                className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1.5 ml-auto"
+                              >
+                                <Zap size={13} />
+                                <span>Reinitiate Bid (Fastest Finger)</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* CHART 2: Live Fastest Finger First (FFF) Applications Queue */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm space-y-4 p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>⚡ Chart 2: Live Fastest Finger First (FFF) Applications Queue</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                    Real-Time Arrival Order (Fastest First)
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Ordered strictly by arrival timestamp with millisecond accuracy. Sourcing & Admin can immediately <strong>Accept</strong> to lock allocation or <strong>Reject</strong> to pass to the next fastest applicant.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Total Applications:</span>
+                <span className="font-bold text-white bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700">
+                  {allFffApplications.length}
+                </span>
+                {pendingFffCount > 0 && (
+                  <span className="font-bold text-amber-300 bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 rounded-xl animate-pulse">
+                    {pendingFffCount} Pending Review
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {allFffApplications.length === 0 ? (
+              <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-10 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto">
+                  <Clock size={24} />
+                </div>
+                <h5 className="text-sm font-bold text-white">No Fastest Finger Applications Yet</h5>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  When you re-initiate shortfalls above, registered suppliers receive emergency alerts and apply. The first supplier to apply appears here immediately at the top of the queue.
+                </p>
+                {unfulfilledItems.length > 0 && (
+                  <button
+                    onClick={() => onInitiateFFF && onInitiateFFF(null)}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow-sm transition"
+                  >
+                    ⚡ Re-initiate Shortfalls for Fastest Finger
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                      <th className="py-3 px-3">Queue Rank</th>
+                      <th className="py-3 px-3">Arrival Timestamp</th>
+                      <th className="py-3 px-3">Article / SKU</th>
+                      <th className="py-3 px-3">Applicant Supplier</th>
+                      <th className="py-3 px-3 text-right">Offered Quantity</th>
+                      <th className="py-3 px-3 text-right">Quoted Rate</th>
+                      <th className="py-3 px-3 text-center">Status</th>
+                      <th className="py-3 px-3 text-right">Sourcing Decision Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {allFffApplications.map((app, index) => {
+                      const isPending = app.status === 'PENDING_APPROVAL';
+                      const isAccepted = app.status === 'ACCEPTED';
+                      const isRejected = app.status === 'REJECTED';
+                      const isFastest = index === 0;
+
+                      return (
+                        <tr 
+                          key={app.id || index} 
+                          className={`transition ${
+                            isFastest && isPending 
+                              ? 'bg-amber-950/20 hover:bg-amber-950/30' 
+                              : 'hover:bg-slate-800/40'
+                          }`}
+                        >
+                          {/* Queue Rank */}
+                          <td className="py-3.5 px-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                index === 0 
+                                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' 
+                                  : index === 1 
+                                  ? 'bg-slate-300 text-slate-900' 
+                                  : index === 2 
+                                  ? 'bg-amber-700 text-white' 
+                                  : 'bg-slate-800 text-slate-400'
+                              }`}>
+                                #{index + 1}
+                              </span>
+                              {index === 0 && (
+                                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                  FASTEST
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Arrival Timestamp (with Millisecond Accuracy) */}
+                          <td className="py-3.5 px-3">
+                            <span className="font-mono text-xs text-white font-semibold block">
+                              {app.received_time || (app.timestamp ? new Date(app.timestamp).toLocaleTimeString() : 'Just now')}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {app.timestamp ? new Date(app.timestamp).toLocaleDateString() : ''}
+                            </span>
+                          </td>
+
+                          {/* Article */}
+                          <td className="py-3.5 px-3">
+                            <span className="font-bold text-white text-sm block">{app.item_name}</span>
+                            <span className="text-[10px] font-mono text-slate-500">{app.sku_code}</span>
+                          </td>
+
+                          {/* Supplier */}
+                          <td className="py-3.5 px-3">
+                            <span className="font-semibold text-slate-200 block">{app.vendor_name}</span>
+                            <span className="text-[10px] text-slate-500 font-mono">ID: {app.vendor_id}</span>
+                          </td>
+
+                          {/* Offered Qty */}
+                          <td className="py-3.5 px-3 text-right font-bold text-white text-sm">
+                            {app.quantity} {app.unit}
+                            <span className="block text-[10px] text-slate-500 font-normal">
+                              (Shortfall: {app.remaining_qty} {app.unit})
+                            </span>
+                          </td>
+
+                          {/* Quoted Rate */}
+                          <td className="py-3.5 px-3 text-right">
+                            <span className="font-mono font-bold text-emerald-400 text-sm block">
+                              ₹{app.quoted_rate}/{app.unit}
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              Bench: ₹{app.target_rate}
+                            </span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3.5 px-3 text-center">
+                            {isPending && (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                                ⏳ Pending Approval
+                              </span>
+                            )}
+                            {isAccepted && (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                ✅ Accepted ({app.allocated_qty || app.quantity} {app.unit})
+                              </span>
+                            )}
+                            {isRejected && (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                                ❌ Rejected
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Action Buttons: Accept / Reject */}
+                          <td className="py-3.5 px-3 text-right">
+                            {isPending ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => onReviewFFF && onReviewFFF(app.sku_code, app.id, 'ACCEPT')}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center gap-1"
+                                  title="Accept this application and lock allocation"
+                                >
+                                  <Check size={13} />
+                                  <span>Accept</span>
+                                </button>
+                                <button
+                                  onClick={() => onReviewFFF && onReviewFFF(app.sku_code, app.id, 'REJECT')}
+                                  className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-semibold rounded-xl text-xs transition active:scale-95 flex items-center gap-1"
+                                  title="Reject application and allow next fastest applicant"
+                                >
+                                  <X size={13} />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : isAccepted ? (
+                              <div className="text-right">
+                                <span className="text-[11px] font-semibold text-emerald-400 block">
+                                  Allocated by {app.reviewed_by || 'Sourcing'}
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {app.reviewed_at ? new Date(app.reviewed_at).toLocaleTimeString() : 'Approved'}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-right">
+                                <span className="text-[11px] font-semibold text-red-400 block">
+                                  Rejected by {app.reviewed_by || 'Sourcing'}
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {app.reviewed_at ? new Date(app.reviewed_at).toLocaleTimeString() : 'Closed'}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

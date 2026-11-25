@@ -290,6 +290,38 @@ function MainApp() {
       }
     });
 
+    s.on('fff:application_received', (data) => {
+      setIndent(prev => {
+        if (!prev) return prev;
+        const newItems = prev.items.map(item => item.sku_code === data.sku.sku_code ? data.sku : item);
+        return { ...prev, items: newItems };
+      });
+      if (data.log) {
+        setLogs(prev => [...prev.slice(-49), data.log]);
+        showToast(data.log.title, data.log.message, 'info');
+      }
+    });
+
+    s.on('fff:application_reviewed', (data) => {
+      setIndent(prev => {
+        if (!prev) return prev;
+        const newItems = prev.items.map(item => item.sku_code === data.sku.sku_code ? data.sku : item);
+        return { ...prev, items: newItems };
+      });
+      if (data.log) {
+        setLogs(prev => [...prev.slice(-49), data.log]);
+        showToast(data.log.title, data.log.message, data.action === 'ACCEPT' ? 'success' : 'warning');
+      }
+    });
+
+    s.on('fff:status_updated', (data) => {
+      setIndent(prev => prev ? { ...prev, items: data.items } : prev);
+      if (data.log) {
+        setLogs(prev => [...prev.slice(-49), data.log]);
+        showToast(data.log.title, data.log.message, 'warning');
+      }
+    });
+
     s.on('error:response', (data) => {
       showToast('Alert', data.message, 'critical');
     });
@@ -577,6 +609,103 @@ function MainApp() {
     }
   };
 
+  // Round 2: Fastest Finger First (FFF) Actions
+  const handleInitiateFFF = async (sku_code = null) => {
+    try {
+      const initiator = currentUser?.name || 'Sourcing Ops';
+      if (socket) socket.emit('fff:reinitiate', { sku_code, initiator });
+      const res = await fetch('/api/fff/reinitiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku_code, initiator })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('⚡ Round 2 Fastest Finger First Live!', `Unfulfilled demand for ${data.count} items reopened for fastest-finger applications!`, 'success');
+      } else {
+        showToast('Notice', data.error || 'All items are already fulfilled', 'info');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleApplyFFF = async (sku_code, quantity, quoted_rate) => {
+    try {
+      const vId = activeVendorObj?.id || currentVendorId || currentUser?.vendorId || 'v1';
+      const vName = activeVendorObj?.name || currentUser?.name || 'Supplier';
+
+      if (socket) {
+        socket.emit('fff:apply', {
+          vendor_id: vId,
+          vendor_name: vName,
+          sku_code,
+          quantity,
+          quoted_rate
+        });
+      }
+
+      const res = await fetch('/api/fff/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor_id: vId,
+          vendor_name: vName,
+          sku_code,
+          quantity,
+          quoted_rate
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('⚡ Application Submitted!', `You are #${data.queue_position} in the fastest queue for Sourcing review!`, 'success');
+      } else {
+        showToast('Application Alert', data.error, 'warning');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReviewFFF = async (sku_code, application_id, action) => {
+    try {
+      const reviewer = currentUser?.name || 'Sourcing Ops';
+      if (socket) {
+        socket.emit('fff:review', {
+          sku_code,
+          application_id,
+          action,
+          reviewer_name: reviewer
+        });
+      }
+
+      const res = await fetch('/api/fff/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku_code,
+          application_id,
+          action,
+          reviewer_name: reviewer
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          action === 'ACCEPT' ? '✅ Application Accepted' : '❌ Application Rejected',
+          action === 'ACCEPT' 
+            ? `Allocated ${data.application.allocated_qty || data.application.quantity} kg to ${data.application.vendor_name}!` 
+            : `Application rejected. Demand remains open for next applicant.`,
+          action === 'ACCEPT' ? 'success' : 'warning'
+        );
+      } else {
+        showToast('Review Alert', data.error, 'warning');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const activeVendorObj = (Array.isArray(vendors) && vendors.find(v => v && (
     v.id === currentVendorId || 
     (currentUser?.vendorId && v.id === currentUser.vendorId) || 
@@ -753,6 +882,9 @@ function MainApp() {
             onAddVendor={handleCreateVendor}
             onTrigger5AmAllocation={handleTrigger5AmAllocation}
             onReopenBiddingWindow={handleReopenBiddingWindow}
+            onInitiateFFF={handleInitiateFFF}
+            onReviewFFF={handleReviewFFF}
+            onApplyFFF={handleApplyFFF}
           />
         )}
 
@@ -774,6 +906,8 @@ function MainApp() {
               onAddVendor={handleCreateVendor}
               onTrigger5AmAllocation={handleTrigger5AmAllocation}
               onReopenBiddingWindow={handleReopenBiddingWindow}
+              onInitiateFFF={handleInitiateFFF}
+              onReviewFFF={handleReviewFFF}
             />
             <NotificationFeed logs={logs} />
           </div>
@@ -792,6 +926,7 @@ function MainApp() {
               currentUser={currentUser}
               skuMaster={skuMaster}
               onSaveCatalog={handleSaveCatalog}
+              onApplyFFF={handleApplyFFF}
             />
           </div>
         )}

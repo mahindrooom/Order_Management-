@@ -266,15 +266,64 @@
         "unit": "kg",
         "target_rate": 22.5,
         "required_qty": 150,
-        "allocated_qty": 0,
-        "remaining_qty": 150,
-        "avg_procured_rate": 0,
-        "status": "OPEN",
+        "allocated_qty": 40,
+        "remaining_qty": 110,
+        "avg_procured_rate": 22,
+        "status": "PARTIALLY_FULFILLED",
         "matched": true,
         "mandi_spec": "Grade A, 45mm+ size, dry skin",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [
+          {
+            "id": "alloc-fff-app-1795600147246-zw7v",
+            "vendor_id": "v1",
+            "vendor_name": "Ramesh Mandi Traders",
+            "quantity": 40,
+            "quoted_rate": 22,
+            "timestamp": "2026-11-25T09:49:07.258Z",
+            "source": "ROUND_2_FFF",
+            "status": "CONFIRMED"
+          }
+        ],
+        "round2_fff": {
+          "status": "ACTIVE",
+          "initiated_at": "2026-11-25T09:49:07.206Z",
+          "target_qty": 150,
+          "applications": [
+            {
+              "id": "fff-app-1795600147246-zw7v",
+              "vendor_id": "v1",
+              "vendor_name": "Ramesh Mandi Traders",
+              "sku_code": "PLK-VEG-POT-01",
+              "item_name": "Potato Agra Fresh (ज्योति आलू)",
+              "unit": "kg",
+              "quantity": 40,
+              "quoted_rate": 22,
+              "timestamp": "2026-11-25T09:49:07.215Z",
+              "received_time": "03:19:07 pm.215",
+              "status": "ACCEPTED",
+              "reviewed_at": "2026-11-25T09:49:07.258Z",
+              "reviewed_by": "Om Mahindroo",
+              "allocated_qty": 40
+            },
+            {
+              "id": "fff-app-1795600147252-3tan",
+              "vendor_id": "v2",
+              "vendor_name": "Suresh Greenfield Agro",
+              "sku_code": "PLK-VEG-POT-01",
+              "item_name": "Potato Agra Fresh (ज्योति आलू)",
+              "unit": "kg",
+              "quantity": 50,
+              "quoted_rate": 23,
+              "timestamp": "2026-11-25T09:49:07.252Z",
+              "received_time": "03:19:07 pm.252",
+              "status": "REJECTED",
+              "reviewed_at": "2026-11-25T09:49:07.264Z",
+              "reviewed_by": "Om Mahindroo"
+            }
+          ]
+        }
       },
       {
         "sku_code": "PLK-VEG-ONI-02",
@@ -291,7 +340,13 @@
         "mandi_spec": "Nashik origin, double patti, dry",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 120,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-VEG-TOM-03",
@@ -308,7 +363,13 @@
         "mandi_spec": "Semi-ripe firm, red, 80-100g",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 100,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-VEG-CAP-04",
@@ -325,7 +386,13 @@
         "mandi_spec": "Dark green, 3-4 lobes, unblemished",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 50,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-VEG-BHI-05",
@@ -342,7 +409,13 @@
         "mandi_spec": "Tender 3-4 inch, snaps easily, no fibers",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 60,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-VEG-PAL-06",
@@ -359,7 +432,13 @@
         "mandi_spec": "Fresh green leaves, no yellowing, bunched",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 40,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-VEG-CAU-07",
@@ -376,7 +455,13 @@
         "mandi_spec": "Compact white curd, green jacket leaves",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 75,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-FRU-BAN-08",
@@ -393,7 +478,13 @@
         "mandi_spec": "Cavendish / Robusta, color stage 3.5 to 4",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 90,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-FRU-POM-09",
@@ -410,7 +501,13 @@
         "mandi_spec": "Bhagwa export grade, ruby red arils",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 50,
+          "applications": []
+        }
       },
       {
         "sku_code": "PLK-VEG-COR-10",
@@ -427,9 +524,24 @@
         "mandi_spec": "Fresh roots intact, aroma rich, green",
         "warning": null,
         "bids": [],
-        "allocations": []
+        "allocations": [],
+        "round2_fff": {
+          "status": "IDLE",
+          "initiated_at": null,
+          "target_qty": 35,
+          "applications": []
+        }
       }
-    ]
+    ],
+    "bidding_window": {
+      "status": "OPEN",
+      "opens_at": "12:30 AM",
+      "closes_at": "05:00 AM",
+      "target_time": "05:00:00",
+      "locked_at": null,
+      "allocated_at": null,
+      "message": "Bidding window open until 5:00 AM. Suppliers can submit and adjust quotes freely."
+    }
   },
   "auditLogs": [
     {
@@ -439,6 +551,51 @@
       "message": "Nightly Indent loaded with 10 SKUs. Requirements distributed to suppliers based on their supply catalogues.",
       "timestamp": "2026-11-25T05:06:23.322Z",
       "severity": "info"
+    },
+    {
+      "id": "log-1795600147206",
+      "type": "FFF_INITIATED",
+      "title": "⚡ Round 2 Fastest Finger First Initiated (1 SKUs)",
+      "message": "Sourcing Admin re-initiated bidding for unfulfilled morning requirements. Fastest applicant gets priority review by Sourcing!",
+      "timestamp": "2026-11-25T09:49:07.206Z",
+      "severity": "warning",
+      "emergency": true
+    },
+    {
+      "id": "log-1795600147247",
+      "type": "FFF_APPLICATION",
+      "title": "⚡ FFF Application: Potato Agra Fresh (ज्योति आलू)",
+      "message": "Ramesh Mandi Traders applied for 40 kg @ ₹22/kg (03:19:07 pm.215 - #1 in queue). Awaiting Sourcing approval.",
+      "timestamp": "2026-11-25T09:49:07.215Z",
+      "severity": "info",
+      "sku_code": "PLK-VEG-POT-01"
+    },
+    {
+      "id": "log-1795600147252",
+      "type": "FFF_APPLICATION",
+      "title": "⚡ FFF Application: Potato Agra Fresh (ज्योति आलू)",
+      "message": "Suresh Greenfield Agro applied for 50 kg @ ₹23/kg (03:19:07 pm.252 - #2 in queue). Awaiting Sourcing approval.",
+      "timestamp": "2026-11-25T09:49:07.252Z",
+      "severity": "info",
+      "sku_code": "PLK-VEG-POT-01"
+    },
+    {
+      "id": "log-1795600147258",
+      "type": "FFF_ACCEPTED",
+      "title": "✅ FFF Approved: Potato Agra Fresh (ज्योति आलू) (Ramesh Mandi Traders)",
+      "message": "Om Mahindroo accepted Ramesh Mandi Traders's fastest finger application for 40 kg @ ₹22/kg. Remaining needed: 110 kg.",
+      "timestamp": "2026-11-25T09:49:07.258Z",
+      "severity": "success",
+      "sku_code": "PLK-VEG-POT-01"
+    },
+    {
+      "id": "log-1795600147264",
+      "type": "FFF_REJECTED",
+      "title": "❌ FFF Rejected: Potato Agra Fresh (ज्योति आलू) (Suresh Greenfield Agro)",
+      "message": "Om Mahindroo rejected application from Suresh Greenfield Agro for Potato Agra Fresh (ज्योति आलू). Demand remains open for next fastest applicant.",
+      "timestamp": "2026-11-25T09:49:07.264Z",
+      "severity": "warning",
+      "sku_code": "PLK-VEG-POT-01"
     }
   ]
 }

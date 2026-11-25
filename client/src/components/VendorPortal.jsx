@@ -3,7 +3,7 @@ import {
   Package, Check, CheckCircle2, AlertCircle, Lock, 
   Send, AlertTriangle, ChevronDown, User, ShieldCheck, 
   Clock, ArrowRight, CornerDownRight, X, TrendingDown, Star,
-  Smartphone, Bell, Download
+  Smartphone, Bell, Download, Zap
 } from 'lucide-react';
 import VendorCatalogModal from './VendorCatalogModal';
 
@@ -19,7 +19,8 @@ export default function VendorPortal({
   isRestricted = false,
   currentUser = null,
   skuMaster = [],
-  onSaveCatalog
+  onSaveCatalog,
+  onApplyFFF
 }) {
   const fallbackVendor = {
     id: currentUser?.vendorId || currentVendorId || 'v1',
@@ -44,6 +45,19 @@ export default function VendorPortal({
   const [backoutSku, setBackoutSku] = useState(null);
   const [backoutDropQty, setBackoutDropQty] = useState('');
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+
+  // Round 2: Fastest Finger First State
+  const [fffApplyingSku, setFffApplyingSku] = useState(null);
+  const [fffQty, setFffQty] = useState('');
+  const [fffRate, setFffRate] = useState('');
+
+  const handleFffSubmit = (skuCode) => {
+    if (!onApplyFFF || !fffQty || !fffRate) return;
+    onApplyFFF(skuCode, parseFloat(fffQty), parseFloat(fffRate));
+    setFffApplyingSku(null);
+    setFffQty('');
+    setFffRate('');
+  };
 
   // PWA Install Prompt & Notification Permissions
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -589,10 +603,165 @@ export default function VendorPortal({
                     </div>
                   )
                 ) : (
-                  <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-400 bg-slate-900/60 rounded-xl border border-slate-800">
-                    <Lock size={13} className="text-slate-500" />
-                    <span>Bidding window closed at 5:00 AM. Prices are locked.</span>
-                  </div>
+                  // Bidding window closed: check if Round 2 FFF is ACTIVE for this SKU
+                  item.round2_fff?.status === 'ACTIVE' && item.remaining_qty > 0 ? (
+                    (() => {
+                      const myFffApp = (item.round2_fff?.applications || []).find(
+                        a => a.vendor_id === currentVendor?.id || a.vendor_name === currentVendor?.name
+                      );
+
+                      if (myFffApp) {
+                        return (
+                          <div className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
+                            myFffApp.status === 'ACCEPTED'
+                              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                              : myFffApp.status === 'REJECTED'
+                              ? 'bg-red-950/40 border-red-500/40 text-red-200'
+                              : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                          }`}>
+                            <div className="flex items-center justify-between font-bold">
+                              <span className="flex items-center gap-1.5">
+                                <Zap size={14} className="text-amber-400" />
+                                <span>Round 2 FFF Application Submitted</span>
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-extrabold ${
+                                myFffApp.status === 'ACCEPTED'
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : myFffApp.status === 'REJECTED'
+                                  ? 'bg-red-500/20 text-red-300'
+                                  : 'bg-amber-500/20 text-amber-300 animate-pulse'
+                              }`}>
+                                {myFffApp.status === 'ACCEPTED' ? '✅ Approved & Allocated' : myFffApp.status === 'REJECTED' ? '❌ Rejected' : '⏳ Sourcing Reviewing (In Queue)'}
+                              </span>
+                            </div>
+
+                            <div className="text-slate-300 text-xs">
+                              Offered: <strong className="text-white">{myFffApp.quantity} {item.unit}</strong> @ <strong className="text-emerald-400 font-mono">₹{myFffApp.quoted_rate}/{item.unit}</strong>
+                              <span className="text-slate-500 ml-2 font-mono text-[11px]">Logged at: {myFffApp.received_time || 'Just now'}</span>
+                            </div>
+
+                            {myFffApp.status === 'PENDING_APPROVAL' && (
+                              <p className="text-[11px] text-amber-300/90 leading-tight">
+                                ⚡ You are in the fastest finger queue! Sourcing and Admin have Accept & Reject buttons on their console and are reviewing applications in real-time.
+                              </p>
+                            )}
+
+                            {myFffApp.status === 'ACCEPTED' && (
+                              <p className="text-[11px] text-emerald-300/90 font-medium">
+                                🎉 Your application was accepted! {myFffApp.allocated_qty || myFffApp.quantity} {item.unit} commitment is confirmed.
+                              </p>
+                            )}
+
+                            {myFffApp.status === 'REJECTED' && (
+                              <div className="pt-1 flex items-center justify-between">
+                                <span className="text-[11px] text-red-300">Demand still open ({item.remaining_qty} {item.unit}). You may re-apply:</span>
+                                <button
+                                  onClick={() => {
+                                    setFffApplyingSku(item.sku_code);
+                                    setFffQty(item.remaining_qty.toString());
+                                    setFffRate((item.target_rate || 25).toString());
+                                  }}
+                                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[10px] font-bold"
+                                >
+                                  Re-Apply Now
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Vendor hasn't applied yet: Show application form
+                      const isApplying = fffApplyingSku === item.sku_code;
+
+                      return (
+                        <div className="bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900 border border-amber-500/50 p-3.5 rounded-2xl space-y-3 shadow-md">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
+                              <Zap size={14} className="text-amber-400 animate-bounce" />
+                              <span>⚡ ROUND 2: FASTEST FINGER FIRST (LIVE)</span>
+                            </div>
+                            <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-bold">
+                              {item.remaining_qty} {item.unit} Shortfall Needed
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] text-slate-300 leading-snug">
+                            Sourcing reopened this item for emergency shortfall fulfillment. The <strong>first vendor to apply</strong> is reviewed immediately by Sourcing Ops!
+                          </p>
+
+                          {isApplying ? (
+                            <div className="bg-slate-900/80 border border-slate-700/80 p-3 rounded-xl space-y-2.5">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[10px] font-semibold text-slate-300 block mb-0.5">
+                                    Offered Qty ({item.unit}):
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={item.remaining_qty}
+                                    value={fffQty}
+                                    onChange={(e) => setFffQty(e.target.value)}
+                                    placeholder={item.remaining_qty.toString()}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-semibold text-slate-300 block mb-0.5">
+                                    Quoted Price (₹/{item.unit}):
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    min="1"
+                                    value={fffRate}
+                                    onChange={(e) => setFffRate(e.target.value)}
+                                    placeholder={item.target_rate?.toString() || '25'}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-end gap-2 pt-1">
+                                <button
+                                  onClick={() => setFffApplyingSku(null)}
+                                  className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-white"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleFffSubmit(item.sku_code)}
+                                  disabled={!fffQty || !fffRate || parseFloat(fffQty) <= 0 || parseFloat(fffRate) <= 0}
+                                  className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-lg text-xs shadow-sm transition active:scale-95 disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  <Zap size={12} />
+                                  <span>Submit Fastest Application ⚡</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setFffApplyingSku(item.sku_code);
+                                setFffQty(item.remaining_qty.toString());
+                                setFffRate((item.target_rate || 25).toString());
+                              }}
+                              className="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
+                            >
+                              <Zap size={14} />
+                              <span>Apply for Shortfall ({item.remaining_qty} {item.unit} Needed)</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-400 bg-slate-900/60 rounded-xl border border-slate-800">
+                      <Lock size={13} className="text-slate-500" />
+                      <span>Bidding window closed at 5:00 AM. Prices are locked.</span>
+                    </div>
+                  )
                 )}
               </div>
             </div>

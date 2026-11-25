@@ -145,15 +145,41 @@ function createIndentFromItems(items, sourceTitle = 'Nightly Indent (12:30 AM)')
       mandi_spec: item.mandi_spec || null,
       warning: item.warning || null,
       bids: [], // [{ id, vendor_id, vendor_name, quoted_rate, quantity, allocated_qty, allocation_status, timestamp, status }]
-      allocations: [] // Winning allocations
+      allocations: [], // Winning allocations
+      round2_fff: {
+        status: 'IDLE', // 'IDLE', 'ACTIVE', 'CLOSED'
+        initiated_at: null,
+        target_qty: parseFloat(item.required_qty),
+        applications: [] // [{ id, vendor_id, vendor_name, quantity, quoted_rate, timestamp, received_time, status: 'PENDING_APPROVAL'|'ACCEPTED'|'REJECTED', reviewed_at, reviewed_by }]
+      }
     }))
   };
+}
+
+// Ensure item has round2_fff object
+function ensureItemFff(item) {
+  if (!item.round2_fff) {
+    item.round2_fff = {
+      status: 'IDLE',
+      initiated_at: null,
+      target_qty: item.remaining_qty || 0,
+      applications: []
+    };
+  }
+  if (!Array.isArray(item.round2_fff.applications)) {
+    item.round2_fff.applications = [];
+  }
+  return item.round2_fff;
 }
 
 const savedIndent = getSavedIndent();
 let currentIndent = (savedIndent && savedIndent.items && savedIndent.items.length > 0)
   ? savedIndent
   : createIndentFromItems(defaultSampleItems);
+
+if (currentIndent && currentIndent.items) {
+  currentIndent.items.forEach(ensureItemFff);
+}
 
 if (!currentIndent.bidding_window) {
   currentIndent.bidding_window = {
@@ -321,6 +347,256 @@ setInterval(() => {
     execute5AmAllocation('AUTO_CLOCK_5AM');
   }
 }, 15000);
+
+// ================= ROUND 2: FASTEST FINGER FIRST (FFF) SHORTFALL ENGINE =================
+function initiateRound2FFF(sku_code = null, initiator = 'Sourcing Ops') {
+  if (!currentIndent || !currentIndent.items) return { success: false, error: 'No active indent' };
+
+  let affectedItems = [];
+
+  if (sku_code) {
+    const item = currentIndent.items.find(i => i.sku_code === sku_code);
+    if (!item) return { success: false, error: 'SKU not found' };
+    if (item.remaining_qty <= 0) return { success: false, error: 'Item already fulfilled' };
+
+    const fff = ensureItemFff(item);
+    fff.status = 'ACTIVE';
+    fff.initiated_at = new Date().toISOString();
+    fff.target_qty = item.remaining_qty;
+    affectedItems.push(item);
+  } else {
+    currentIndent.items.forEach(item => {
+      if (item.remaining_qty > 0) {
+        const fff = ensureItemFff(item);
+        fff.status = 'ACTIVE';
+        fff.initiated_at = new Date().toISOString();
+        fff.target_qty = item.remaining_qty;
+        affectedItems.push(item);
+      }
+    });
+  }
+
+  if (affectedItems.length === 0) {
+    return { success: false, error: 'All items are already fully procured!' };
+  }
+
+  const log = {
+    id: 'log-' + Date.now(),
+    type: 'FFF_INITIATED',
+    title: `⚡ Round 2 Fastest Finger First Initiated (${affectedItems.length} SKUs)`,
+    message: `${initiator} re-initiated bidding for unfulfilled morning requirements. Fastest applicant gets priority review by Sourcing!`,
+    timestamp: new Date().toISOString(),
+    severity: 'warning',
+    emergency: true
+  };
+
+  auditLogs.push(log);
+  saveIndent(currentIndent);
+  saveLogs(auditLogs);
+
+  // Broadcast Web Push to all suppliers
+  broadcastClosedAppPush(
+    '⚡ ROUND 2 FASTEST FINGER FIRST IS LIVE!',
+    `Urgent fresh produce shortfall requirements opened for ${affectedItems.length} items! First to apply gets priority review. Open portal now!`,
+    { url: '/' }
+  );
+
+  io.emit('state:updated', {
+    indent: currentIndent,
+    summary: calculateSummary(),
+    log
+  });
+
+  io.emit('fff:status_updated', {
+    affected_count: affectedItems.length,
+    items: currentIndent.items,
+    log
+  });
+
+  return { success: true, count: affectedItems.length };
+}
+
+function applyRound2FFF(vendor_id, vendor_name, sku_code, quantity, quoted_rate) {
+  if (!currentIndent || !currentIndent.items) return { success: false, error: 'No active indent' };
+
+  const item = currentIndent.items.find(i => i.sku_code === sku_code);
+  if (!item) return { success: false, error: 'SKU not found' };
+
+  const fff = ensureItemFff(item);
+  if (fff.status !== 'ACTIVE' || item.remaining_qty <= 0) {
+    return { success: false, error: 'Fastest Finger First is not active for this item or item is already fulfilled' };
+  }
+
+  const qty = parseFloat(quantity);
+  const rate = parseFloat(quoted_rate);
+  if (!qty || qty <= 0 || !rate || rate <= 0) {
+    return { success: false, error: 'Valid quantity and rate are required' };
+  }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '.' + String(now.getMilliseconds()).padStart(3, '0');
+
+  const application = {
+    id: 'fff-app-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+    vendor_id,
+    vendor_name,
+    sku_code,
+    item_name: item.item_name,
+    unit: item.unit,
+    quantity: qty,
+    quoted_rate: rate,
+    timestamp: now.toISOString(),
+    received_time: timeStr,
+    status: 'PENDING_APPROVAL', // 'PENDING_APPROVAL', 'ACCEPTED', 'REJECTED'
+    reviewed_at: null,
+    reviewed_by: null
+  };
+
+  fff.applications.push(application);
+  // Sort applications ascending by timestamp (fastest first!)
+  fff.applications.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const queuePosition = fff.applications.filter(a => a.status === 'PENDING_APPROVAL').findIndex(a => a.id === application.id) + 1;
+
+  const log = {
+    id: 'log-' + Date.now(),
+    type: 'FFF_APPLICATION',
+    title: `⚡ FFF Application: ${item.item_name}`,
+    message: `${vendor_name} applied for ${qty} ${item.unit} @ ₹${rate}/${item.unit} (${timeStr} - #${queuePosition} in queue). Awaiting Sourcing approval.`,
+    timestamp: now.toISOString(),
+    severity: 'info',
+    sku_code: item.sku_code
+  };
+
+  auditLogs.push(log);
+  saveIndent(currentIndent);
+  saveLogs(auditLogs);
+
+  io.emit('fff:application_received', {
+    application,
+    sku: item,
+    queue_position: queuePosition,
+    log
+  });
+
+  io.emit('sku:updated', {
+    sku: item,
+    summary: calculateSummary(),
+    log
+  });
+
+  return { success: true, application, queue_position: queuePosition };
+}
+
+function reviewRound2FFFApplication(sku_code, application_id, action, reviewer_name = 'Sourcing Ops') {
+  if (!currentIndent || !currentIndent.items) return { success: false, error: 'No active indent' };
+
+  const item = currentIndent.items.find(i => i.sku_code === sku_code);
+  if (!item) return { success: false, error: 'SKU not found' };
+
+  const fff = ensureItemFff(item);
+  const application = fff.applications.find(a => a.id === application_id);
+  if (!application) return { success: false, error: 'Application not found' };
+
+  if (application.status !== 'PENDING_APPROVAL') {
+    return { success: false, error: `Application already ${application.status.toLowerCase()}` };
+  }
+
+  const now = new Date();
+
+  if (action === 'ACCEPT') {
+    if (item.remaining_qty <= 0) {
+      return { success: false, error: 'Item requirement is already completely fulfilled!' };
+    }
+
+    const allocQty = Math.min(application.quantity, item.remaining_qty);
+    application.status = 'ACCEPTED';
+    application.allocated_qty = allocQty;
+    application.reviewed_at = now.toISOString();
+    application.reviewed_by = reviewer_name;
+
+    // Add to item.allocations
+    if (!item.allocations) item.allocations = [];
+    item.allocations.push({
+      id: 'alloc-' + application.id,
+      vendor_id: application.vendor_id,
+      vendor_name: application.vendor_name,
+      quantity: allocQty,
+      quoted_rate: application.quoted_rate,
+      timestamp: now.toISOString(),
+      source: 'ROUND_2_FFF',
+      status: 'CONFIRMED'
+    });
+
+    item.allocated_qty += allocQty;
+    item.remaining_qty = Math.max(0, item.required_qty - item.allocated_qty);
+    if (item.remaining_qty === 0) {
+      item.status = 'FULFILLED';
+      fff.status = 'CLOSED';
+    } else {
+      item.status = 'PARTIALLY_FULFILLED';
+    }
+
+    // Recalculate average procured rate
+    let totalCost = 0;
+    item.allocations.forEach(a => {
+      totalCost += (a.quantity * (a.quoted_rate || item.target_rate));
+    });
+    item.avg_procured_rate = item.allocated_qty > 0 ? parseFloat((totalCost / item.allocated_qty).toFixed(2)) : 0;
+
+    const log = {
+      id: 'log-' + Date.now(),
+      type: 'FFF_ACCEPTED',
+      title: `✅ FFF Approved: ${item.item_name} (${application.vendor_name})`,
+      message: `${reviewer_name} accepted ${application.vendor_name}'s fastest finger application for ${allocQty} ${item.unit} @ ₹${application.quoted_rate}/${item.unit}. Remaining needed: ${item.remaining_qty} ${item.unit}.`,
+      timestamp: now.toISOString(),
+      severity: 'success',
+      sku_code: item.sku_code
+    };
+
+    auditLogs.push(log);
+    saveIndent(currentIndent);
+    saveLogs(auditLogs);
+
+    // Notify vendor
+    broadcastClosedAppPush(
+      '✅ Mandi Quote Approved!',
+      `Pluckk accepted your application for ${allocQty} ${item.unit} of ${item.item_name} @ ₹${application.quoted_rate}/${item.unit}. Commitment confirmed!`,
+      { url: '/' }
+    );
+
+    const summary = calculateSummary();
+    io.emit('state:updated', { indent: currentIndent, summary, log });
+    io.emit('fff:application_reviewed', { application, sku: item, action: 'ACCEPT', log });
+
+    return { success: true, application, sku: item };
+  } else if (action === 'REJECT') {
+    application.status = 'REJECTED';
+    application.reviewed_at = now.toISOString();
+    application.reviewed_by = reviewer_name;
+
+    const log = {
+      id: 'log-' + Date.now(),
+      type: 'FFF_REJECTED',
+      title: `❌ FFF Rejected: ${item.item_name} (${application.vendor_name})`,
+      message: `${reviewer_name} rejected application from ${application.vendor_name} for ${item.item_name}. Demand remains open for next fastest applicant.`,
+      timestamp: now.toISOString(),
+      severity: 'warning',
+      sku_code: item.sku_code
+    };
+
+    auditLogs.push(log);
+    saveIndent(currentIndent);
+    saveLogs(auditLogs);
+
+    io.emit('fff:application_reviewed', { application, sku: item, action: 'REJECT', log });
+    io.emit('sku:updated', { sku: item, summary: calculateSummary(), log });
+
+    return { success: true, application, sku: item };
+  } else {
+    return { success: false, error: 'Invalid action. Must be ACCEPT or REJECT' };
+  }
+}
 
 function calculateSummary() {
   if (!currentIndent || !currentIndent.items) {
@@ -688,6 +964,25 @@ app.post('/api/bidding-window/reopen', (req, res) => {
   res.json({ success, bidding_window: currentIndent?.bidding_window });
 });
 
+// Round 2 Fastest Finger First (FFF) Endpoints
+app.post('/api/fff/reinitiate', (req, res) => {
+  const { sku_code, initiator } = req.body;
+  const result = initiateRound2FFF(sku_code, initiator);
+  res.json(result);
+});
+
+app.post('/api/fff/apply', (req, res) => {
+  const { vendor_id, vendor_name, sku_code, quantity, quoted_rate } = req.body;
+  const result = applyRound2FFF(vendor_id, vendor_name, sku_code, quantity, quoted_rate);
+  res.json(result);
+});
+
+app.post('/api/fff/review', (req, res) => {
+  const { sku_code, application_id, action, reviewer_name } = req.body;
+  const result = reviewRound2FFFApplication(sku_code, application_id, action, reviewer_name);
+  res.json(result);
+});
+
 app.post('/api/upload-indent', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -1015,6 +1310,21 @@ io.on('connection', (socket) => {
   socket.on('admin:reopen_bidding_window', () => {
     reopenBiddingWindow();
   });
+
+  // 5. Round 2: Fastest Finger First (FFF) Actions
+  socket.on('fff:reinitiate', (payload = {}) => {
+    initiateRound2FFF(payload.sku_code, payload.initiator);
+  });
+
+  socket.on('fff:apply', (payload) => {
+    const { vendor_id, vendor_name, sku_code, quantity, quoted_rate } = payload;
+    applyRound2FFF(vendor_id, vendor_name, sku_code, quantity, quoted_rate);
+  });
+
+  socket.on('fff:review', (payload) => {
+    const { sku_code, application_id, action, reviewer_name } = payload;
+    reviewRound2FFFApplication(sku_code, application_id, action, reviewer_name);
+  });
 });
 
 // Serve built client static files if available
@@ -1030,6 +1340,17 @@ if (fs.existsSync(clientDistPath)) {
 }
 
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Pluckk Procurement & L1 Allocation Engine running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`Pluckk Procurement & L1 Allocation Engine running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = {
+  app,
+  server,
+  initiateRound2FFF,
+  applyRound2FFF,
+  reviewRound2FFFApplication,
+  execute5AmAllocation
+};

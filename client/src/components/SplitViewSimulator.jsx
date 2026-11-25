@@ -20,7 +20,10 @@ export default function SplitViewSimulator({
   onUpdateVendorRatings,
   onAddVendor,
   onTrigger5AmAllocation,
-  onReopenBiddingWindow
+  onReopenBiddingWindow,
+  onInitiateFFF,
+  onReviewFFF,
+  onApplyFFF
 }) {
   const [vendor1Id, setVendor1Id] = useState('v1'); // Ramesh
   const [vendor2Id, setVendor2Id] = useState('v2'); // Suresh
@@ -79,6 +82,8 @@ export default function SplitViewSimulator({
             onAddVendor={onAddVendor}
             onTrigger5AmAllocation={onTrigger5AmAllocation}
             onReopenBiddingWindow={onReopenBiddingWindow}
+            onInitiateFFF={onInitiateFFF}
+            onReviewFFF={onReviewFFF}
           />
         </div>
 
@@ -106,6 +111,7 @@ export default function SplitViewSimulator({
               compact={true}
               skuMaster={skuMaster}
               onSaveCatalog={onSaveCatalog}
+              onApplyFFF={onApplyFFF}
             />
           </div>
 
@@ -131,6 +137,7 @@ export default function SplitViewSimulator({
               compact={true}
               skuMaster={skuMaster}
               onSaveCatalog={onSaveCatalog}
+              onApplyFFF={onApplyFFF}
             />
           </div>
         </div>
