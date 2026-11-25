@@ -1,5 +1,5 @@
 // Pluckk Mobile PWA Service Worker (Push Notifications & Live Background Alerts)
-const SW_VERSION = 'pluckk-sw-v2';
+const SW_VERSION = 'pluckk-sw-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

@@ -477,11 +477,11 @@ export default function VendorPortal({
               {/* My quote status pill: handles Window OPEN vs LOCKED */}
               {myBid && (
                 isWindowOpen ? (
-                  <div className="mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border bg-blue-50 border-blue-500/40 text-blue-200 shadow-xs">
+                  <div className="mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border bg-blue-50 border-blue-200 text-blue-900 shadow-xs">
                     <div>
-                      <div className="font-bold flex items-center gap-1.5 text-white">
-                        <span className="text-blue-600">📝 Your Submitted Quote:</span>
-                        <span className="text-emerald-600 font-bold font-mono">
+                      <div className="font-bold flex items-center gap-1.5 text-slate-900">
+                        <span className="text-blue-700">📝 Your Submitted Quote:</span>
+                        <span className="text-emerald-700 font-bold font-mono">
                           {myBid.quantity} {item.unit} @ ₹{myBid.quoted_rate}/{item.unit}
                         </span>
                       </div>
@@ -500,13 +500,13 @@ export default function VendorPortal({
                 ) : (
                   <div className={`mt-2.5 text-xs rounded-2xl p-3 flex items-center justify-between border ${
                     myBid.allocated_qty > 0
-                      ? 'bg-emerald-50 border-emerald-500/40 text-emerald-200'
-                      : 'bg-amber-50 border-amber-500/40 text-amber-200'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      : 'bg-amber-50 border-amber-300 text-amber-900'
                   }`}>
                     <div>
                       <span className="font-bold text-sm">
                         {myBid.allocated_qty > 0 
-                          ? `🟢 Approved at 5:00 AM: ${myBid.allocated_qty} ${item.unit} @ ₹${myBid.quoted_rate}/${item.unit}` 
+                          ? `🟢 Approved at 5:00 AM: ${myBid.allocated_qty} ${item.unit} @ ₹{myBid.quoted_rate}/${item.unit}` 
                           : `🔴 Not Awarded at 5:00 AM: Quoted ₹${myBid.quoted_rate}/${item.unit}`}
                       </span>
                       <span className="block text-[11px] opacity-80 mt-0.5">
@@ -517,7 +517,7 @@ export default function VendorPortal({
                     </div>
 
                     {myBid.allocated_qty > 0 && (
-                      <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold">
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-lg font-bold">
                         L1 Winner
                       </span>
                     )}
@@ -537,7 +537,7 @@ export default function VendorPortal({
 
                       <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="text-[11px] text-slate-700 block mb-1">
+                          <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                             Your Price per {item.unit} (₹):
                           </label>
                           <input
@@ -547,12 +547,13 @@ export default function VendorPortal({
                             placeholder="e.g. 25.00"
                             value={quotedRate}
                             onChange={(e) => setQuotedRate(e.target.value)}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 shadow-xs"
+                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 shadow-xs"
+                            style={{ color: '#0f172a', WebkitTextFillColor: '#0f172a', backgroundColor: '#ffffff' }}
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] text-slate-700 block mb-1">
+                          <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                             Quantity you can give ({item.unit}):
                           </label>
                           <input
@@ -561,7 +562,8 @@ export default function VendorPortal({
                             placeholder={`e.g. ${item.remaining_qty || 50}`}
                             value={quotedQty}
                             onChange={(e) => setQuotedQty(e.target.value)}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 shadow-xs"
+                            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 shadow-xs"
+                            style={{ color: '#0f172a', WebkitTextFillColor: '#0f172a', backgroundColor: '#ffffff' }}
                           />
                         </div>
                       </div>
@@ -704,7 +706,8 @@ export default function VendorPortal({
                                     value={fffQty}
                                     onChange={(e) => setFffQty(e.target.value)}
                                     placeholder={item.remaining_qty.toString()}
-                                    className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500 shadow-xs"
+                                    className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
+                                    style={{ color: '#0f172a', WebkitTextFillColor: '#0f172a', backgroundColor: '#ffffff' }}
                                   />
                                 </div>
                                 <div>
@@ -718,7 +721,8 @@ export default function VendorPortal({
                                     value={fffRate}
                                     onChange={(e) => setFffRate(e.target.value)}
                                     placeholder={item.target_rate?.toString() || '25'}
-                                    className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500 shadow-xs"
+                                    className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
+                                    style={{ color: '#0f172a', WebkitTextFillColor: '#0f172a', backgroundColor: '#ffffff' }}
                                   />
                                 </div>
                               </div>
@@ -827,6 +831,7 @@ export default function VendorPortal({
                   value={backoutDropQty}
                   onChange={(e) => setBackoutDropQty(e.target.value)}
                   className="w-full bg-white border border-red-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-red-500 shadow-xs"
+                  style={{ color: '#0f172a', WebkitTextFillColor: '#0f172a', backgroundColor: '#ffffff' }}
                 />
               </div>
 
