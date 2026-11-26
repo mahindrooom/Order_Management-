@@ -3,7 +3,8 @@ import {
   Package, Check, CheckCircle2, AlertCircle, Lock, 
   Send, AlertTriangle, ChevronDown, User, ShieldCheck, 
   Clock, ArrowRight, CornerDownRight, X, TrendingDown, Star,
-  Smartphone, Bell, Download, Zap
+  Smartphone, Bell, Download, Zap, LogOut, BookOpen, Layers,
+  ChevronRight, Calendar, DollarSign, Truck, FileText, CheckCircle
 } from 'lucide-react';
 import VendorCatalogModal from './VendorCatalogModal';
 
@@ -20,7 +21,8 @@ export default function VendorPortal({
   currentUser = null,
   skuMaster = [],
   onSaveCatalog,
-  onApplyFFF
+  onApplyFFF,
+  onLogout
 }) {
   const fallbackVendor = {
     id: currentUser?.vendorId || currentVendorId || 'v1',
@@ -37,6 +39,9 @@ export default function VendorPortal({
     (currentUser?.vendorId && v.id === currentUser.vendorId) || 
     (currentUser?.email && v.email && v.email.toLowerCase() === currentUser.email.toLowerCase())
   ))) || (Array.isArray(vendors) && vendors[0]) || fallbackVendor;
+
+  // Active Menu: 'live_bidding', 'my_orders', 'order_history', 'catalogue'
+  const [activeVendorMenu, setActiveVendorMenu] = useState('live_bidding');
 
   const [selectedSku, setSelectedSku] = useState(null);
   const [quotedRate, setQuotedRate] = useState('');
@@ -57,6 +62,17 @@ export default function VendorPortal({
     setFffApplyingSku(null);
     setFffQty('');
     setFffRate('');
+  };
+
+  // Sign out handler
+  const handleLogoutClick = () => {
+    if (typeof onLogout === 'function') {
+      onLogout();
+    } else {
+      sessionStorage.removeItem('pluckk_user');
+      sessionStorage.removeItem('pluckk_token');
+      window.location.reload();
+    }
   };
 
   // PWA Install Prompt & Notification Permissions
@@ -126,23 +142,50 @@ export default function VendorPortal({
     mySuppliedSkus.length === 0 || mySuppliedSkus.includes(item.sku_code)
   );
 
-  // Find all awarded commitments for this vendor (L1 winning bids accepted after 5:00 AM)
+  // Find all awarded commitments for this vendor (L1 winning bids accepted at 5:00 AM OR Round 2 FFF accepted)
   const myCommitments = (indent?.items || []).flatMap(item => {
     const myBid = (item.bids || []).find(b => b && b.vendor_id === currentVendor?.id && b.status === 'ACTIVE' && b.allocated_qty > 0);
+    const myFffApp = (item.round2_fff?.applications || []).find(
+      a => (a.vendor_id === currentVendor?.id || a.vendor_name === currentVendor?.name) && a.status === 'ACCEPTED'
+    );
+    
+    const results = [];
     if (myBid) {
-      return [{
+      results.push({
         sku_code: item.sku_code,
         item_name: item.item_name,
+        category: item.category,
         unit: item.unit,
         target_rate: item.target_rate,
         quoted_rate: myBid.quoted_rate,
         committed_qty: myBid.allocated_qty,
         total_bid_qty: myBid.quantity,
-        timestamp: myBid.timestamp
-      }];
+        total_amount: myBid.allocated_qty * myBid.quoted_rate,
+        timestamp: myBid.timestamp,
+        awardType: 'L1 Lowest Price (5:00 AM IST)'
+      });
     }
-    return [];
+    if (myFffApp) {
+      const qty = myFffApp.allocated_qty || myFffApp.quantity;
+      results.push({
+        sku_code: item.sku_code,
+        item_name: item.item_name,
+        category: item.category,
+        unit: item.unit,
+        target_rate: item.target_rate,
+        quoted_rate: myFffApp.quoted_rate,
+        committed_qty: qty,
+        total_bid_qty: myFffApp.quantity,
+        total_amount: qty * myFffApp.quoted_rate,
+        timestamp: myFffApp.received_time,
+        awardType: 'Round 2 Fastest Finger First'
+      });
+    }
+    return results;
   });
+
+  const totalPoAmount = myCommitments.reduce((sum, c) => sum + (c.total_amount || 0), 0);
+  const totalCommittedKg = myCommitments.reduce((sum, c) => sum + (c.committed_qty || 0), 0);
 
   const handleStartQuote = (item) => {
     setSelectedSku(item.sku_code);
@@ -194,133 +237,228 @@ export default function VendorPortal({
     setBackoutDropQty('');
   };
 
-  return (
-    <div className={`space-y-4 ${compact ? 'max-w-md mx-auto' : 'max-w-2xl mx-auto'}`}>
-      {/* 📲 PWA App Install Banner for Vendors */}
-      {!isInstalled && (
-        <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border border-emerald-500/40 rounded-3xl p-3.5 flex items-center justify-between gap-3 shadow-lg">
+  // Mocked historical fulfillments for Pluckk daily mandi cycles
+  const pastOrdersHistory = [
+    {
+      id: 'PO-20261125-PLK01',
+      date: '25 Nov 2026',
+      hub: 'Turbhe APMC Hub (Inbound Gate 2)',
+      items: [
+        { name: 'Potato Agra Fresh (ज्योति आलू)', qty: 150, unit: 'kg', rate: 24, total: 3600 },
+        { name: 'Onion Nashik Red (नाशिक लाल कांदा)', qty: 80, unit: 'kg', rate: 29, total: 2320 }
+      ],
+      totalAmount: 5920,
+      totalKg: 230,
+      status: 'Fulfilled & Settled',
+      utr: 'PLK20261125-981240',
+      rating: 4.9
+    },
+    {
+      id: 'PO-20261124-PLK02',
+      date: '24 Nov 2026',
+      hub: 'Turbhe APMC Hub (Inbound Gate 2)',
+      items: [
+        { name: 'Tomato Hybrid (टमाटर)', qty: 120, unit: 'kg', rate: 22, total: 2640 },
+        { name: 'Robusta Banana Semi-Ripe (केला)', qty: 90, unit: 'kg', rate: 27, total: 2430 }
+      ],
+      totalAmount: 5070,
+      totalKg: 210,
+      status: 'Fulfilled & Settled',
+      utr: 'PLK20261124-774198',
+      rating: 4.8
+    },
+    {
+      id: 'PO-20261123-PLK03',
+      date: '23 Nov 2026',
+      hub: 'Turbhe APMC Hub (Inbound Gate 2)',
+      items: [
+        { name: 'Potato Agra Fresh (ज्योति आलू)', qty: 200, unit: 'kg', rate: 23.5, total: 4700 },
+        { name: 'Cauliflower Grade A (फूलगोभी)', qty: 60, unit: 'kg', rate: 32, total: 1920 }
+      ],
+      totalAmount: 6620,
+      totalKg: 260,
+      status: 'Fulfilled & Settled',
+      utr: 'PLK20261123-553210',
+      rating: 4.9
+    }
+  ];
+
+  // --------------------------------------------------------------------------
+  // Left Sidebar Menu Component (Reusable for Desktop & Mobile Drawer)
+  // --------------------------------------------------------------------------
+  const renderSidebarContent = () => (
+    <div className="flex flex-col h-full justify-between space-y-6">
+      <div className="space-y-5">
+        {/* Vendor Header Card */}
+        <div className="space-y-3 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-slate-900 text-lg shadow-md shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-white text-lg shadow-md shadow-emerald-600/20 shrink-0">
               P
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                <span>Install Pluckk Supplier App</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-semibold uppercase">Mobile PWA</span>
-              </h4>
-              <p className="text-[11px] text-slate-700">
-                Add to your phone home screen for live mandi updates & buzz alerts.
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-600">Pluckk Supplier</div>
+              <h3 className="font-extrabold text-slate-900 text-sm truncate" title={currentVendor?.name}>
+                {currentVendor?.name || 'Verified Supplier'}
+              </h3>
+              <p className="text-[11px] text-slate-500 font-mono truncate" title={currentVendor?.email}>
+                {currentVendor?.email || 'vendor@pluckk.partner'}
               </p>
             </div>
           </div>
 
-          {installPrompt ? (
-            <button
-              onClick={handleInstallClick}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm shrink-0 active:scale-95 flex items-center gap-1.5"
-            >
-              <Smartphone size={14} />
-              <span>Install App</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => alert("📱 To install on your phone:\n\n• Android (Chrome): Tap the 3 dots (⋮) in Chrome -> 'Install app' or 'Add to Home screen'.\n\n• iPhone (Safari): Tap the Share button (⎋) at the bottom -> 'Add to Home Screen' (➕).")}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-700 text-slate-800 rounded-xl text-[11px] font-semibold transition shrink-0 border border-slate-200"
-            >
-              <span>Install Guide 📲</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Device Notifications Opt-In */}
-      {notifPermission !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
-        <div className="bg-blue-50 border border-blue-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-blue-300">
-            <Bell size={14} className="text-blue-600 shrink-0" />
-            <span className="text-[11px]">Turn on sound & vibration alerts for 12:30 AM indents & shortfall broadcasts</span>
-          </div>
-          <button
-            onClick={handleEnableNotifications}
-            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shrink-0"
-          >
-            Enable Alerts
-          </button>
-        </div>
-      )}
-
-      {/* Mobile Top Bar */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
-              P
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600">Pluckk Supplier Portal</div>
-              <div className="text-sm font-bold text-slate-900">Daily Mandi Procurement</div>
-            </div>
-          </div>
-
-          {/* Top-Right "My Supply Catalogue" Button (Placed right where user requested!) */}
-          <button
-            onClick={() => setIsCatalogModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95"
-            title="Manage what articles you supply to Pluckk"
-          >
-            <Package size={15} />
-            <span>My Supply Catalogue</span>
-            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">
-              {mySuppliedSkus.length}
+          <div className="flex items-center justify-between text-xs bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+            <span className="text-[10px] text-emerald-700 bg-emerald-100/70 font-bold px-2 py-0.5 rounded-md">
+              1-to-1 Verified
             </span>
-          </button>
-        </div>
+            <span className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+              <Star size={12} className="fill-amber-400 text-amber-500" />
+              <span>★{currentVendor?.compositeRating || 4.8} Score</span>
+            </span>
+          </div>
 
-        {/* Vendor Selector Pill or Fixed Supplier View */}
-        <div className="pt-2 border-t border-slate-200">
-          {isRestricted ? (
-            <div className="flex items-center justify-between text-xs bg-slate-100 p-2.5 rounded-xl border border-slate-200">
-              <div>
-                <span className="text-[10px] text-slate-500 block font-semibold uppercase">Verified Supplier:</span>
-                <span className="font-bold text-slate-900 text-sm">{currentUser?.name || currentVendor?.name || 'Verified Supplier'}</span>
-                <span className="text-[11px] text-slate-500 block font-mono">{currentUser?.email || currentVendor?.email || ''}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg font-semibold block">
-                  1-to-1 Verified
-                </span>
-                <span className="text-[10px] text-amber-600 flex items-center gap-0.5 justify-end mt-1">
-                  <Star size={10} className="fill-amber-400 text-amber-600" />
-                  <span>★{currentVendor?.compositeRating || 4.8} Score</span>
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="text-[11px] text-slate-500 block mb-1">Acting as Supplier (Switch to test):</label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(vendors || []).map((v) => (
+          {/* Switch supplier tester (if not restricted) */}
+          {!isRestricted && (
+            <div className="pt-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                Simulate Supplier:
+              </label>
+              <div className="grid grid-cols-2 gap-1">
+                {(vendors || []).slice(0, 4).map((v) => (
                   <button
                     key={v.id}
                     onClick={() => onSelectVendor(v.id)}
-                    className={`text-left px-2.5 py-1.5 rounded-xl text-xs transition border flex items-center justify-between ${
+                    className={`text-left px-2 py-1 rounded-lg text-[11px] transition border truncate ${
                       v.id === currentVendor?.id
-                        ? 'bg-emerald-600 text-white font-semibold border-emerald-500 shadow-sm'
-                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-700'
+                        ? 'bg-emerald-600 text-white font-bold border-emerald-500'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <span className="truncate">{v.name.split(' ')[0]} {v.name.split(' ')[1] || ''}</span>
-                    <span className="text-[10px] opacity-75">★{v.compositeRating || 4.8}</span>
+                    {v.name.split(' ')[0]}
                   </button>
                 ))}
               </div>
             </div>
           )}
         </div>
+
+        {/* Navigation Menu Options */}
+        <nav className="space-y-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 mb-2">
+            Supplier Menu
+          </div>
+
+          {/* 1. Live Bidding */}
+          <button
+            onClick={() => setActiveVendorMenu('live_bidding')}
+            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition text-left ${
+              activeVendorMenu === 'live_bidding'
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Zap size={16} className={activeVendorMenu === 'live_bidding' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>Live Bidding</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              activeVendorMenu === 'live_bidding'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-100 text-slate-600'
+            }`}>
+              {visibleItems.length}
+            </span>
+          </button>
+
+          {/* 2. My Orders (Allocated Orders) */}
+          <button
+            onClick={() => setActiveVendorMenu('my_orders')}
+            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition text-left ${
+              activeVendorMenu === 'my_orders'
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Package size={16} className={activeVendorMenu === 'my_orders' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>My Orders</span>
+            </div>
+            {myCommitments.length > 0 ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white">
+                {myCommitments.length}
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-normal">0</span>
+            )}
+          </button>
+
+          {/* 3. Order History */}
+          <button
+            onClick={() => setActiveVendorMenu('order_history')}
+            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition text-left ${
+              activeVendorMenu === 'order_history'
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Clock size={16} className={activeVendorMenu === 'order_history' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>Order History</span>
+            </div>
+            <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+              {pastOrdersHistory.length}
+            </span>
+          </button>
+
+          {/* 4. His Catalogue */}
+          <button
+            onClick={() => setActiveVendorMenu('catalogue')}
+            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition text-left ${
+              activeVendorMenu === 'catalogue'
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <BookOpen size={16} className={activeVendorMenu === 'catalogue' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>His Catalogue</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
+              {mySuppliedSkus.length}
+            </span>
+          </button>
+        </nav>
       </div>
 
+      {/* Bottom Pinned Section: Sign Out */}
+      <div className="pt-4 border-t border-slate-200 space-y-2 mt-auto">
+        <button
+          onClick={() => setIsCatalogModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+          title="Configure which articles you supply"
+        >
+          <Layers size={13} className="text-emerald-600" />
+          <span>Edit Supply Catalogue</span>
+        </button>
+
+        <button
+          onClick={handleLogoutClick}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-red-600 hover:bg-red-50 hover:text-red-700 font-bold text-xs transition border border-transparent hover:border-red-200 active:scale-98"
+          title="Sign out of your supplier account"
+        >
+          <LogOut size={16} className="text-red-500" />
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  // --------------------------------------------------------------------------
+  // View 1: Live Bidding (Current Indent, 12:30 AM–5:00 AM Quotes & FFF Shortfalls)
+  // --------------------------------------------------------------------------
+  const renderLiveBiddingView = () => (
+    <div className="space-y-4">
       {/* ⏰ 5:00 AM Bidding Window Status Banner */}
-      <div className={`rounded-3xl p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md ${
+      <div className={`rounded-3xl p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
         isWindowOpen 
           ? 'bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border-emerald-500/40 text-emerald-300' 
           : 'bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-amber-500/40 text-amber-300'
@@ -342,84 +480,37 @@ export default function VendorPortal({
                 {isWindowOpen ? 'Adjust Rates Anytime' : 'Allocations Finalized'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-700 mt-0.5">
+            <p className="text-[11px] text-slate-300 mt-0.5">
               {isWindowOpen 
                 ? 'The system waits until 5:00 AM to accept bids. You can freely adjust your rate and quantity anytime before 5:00 AM!'
-                : 'As clock hit 5:00 AM, the system approved lowest-price bids (L1). Quoted prices are now locked.'}
+                : 'As clock hit 5:00 AM, the system approved lowest-price bids (L1). Check the "My Orders" tab on the left for awarded orders.'}
             </p>
           </div>
         </div>
 
         {isWindowOpen && (
-          <div className="text-right shrink-0 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">Allocation Time</span>
-            <span className="text-xs font-mono font-bold text-emerald-600">05:00 AM IST</span>
+          <div className="text-right shrink-0 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Allocation Time</span>
+            <span className="text-xs font-mono font-bold text-emerald-400">05:00 AM IST</span>
           </div>
         )}
       </div>
 
-      {/* 1-to-1 Privacy & L1 Lowest Price Rule Note */}
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-xs text-slate-500 space-y-1">
-        <div className="flex items-center gap-2 text-emerald-600 font-semibold">
-          <ShieldCheck size={16} className="shrink-0" />
+      {/* 1-to-1 Privacy & L1 Rule Note */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-600 space-y-1">
+        <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+          <ShieldCheck size={16} className="shrink-0 text-emerald-600" />
           <span>1-to-1 Least-Cost Allocation Engine</span>
         </div>
-        <p className="text-[11px] leading-relaxed">
-          Requirements are segregated based on your supply catalogue. Quote your best competitive rate — the system automatically awards orders to the <strong>minimum price (L1)</strong> at 5:00 AM, with vendor ratings (Quality, Price, Fill Rate, Time of Delivery) used as tie-breakers.
+        <p className="text-[11px] leading-relaxed text-slate-600">
+          Requirements are segregated based on your supply catalogue. Quote your best competitive rate — the system automatically awards orders to the <strong>minimum price (L1)</strong> at 5:00 AM, with vendor ratings used as tie-breakers.
         </p>
       </div>
-
-      {/* My Confirmed Allocations Section (Only after 5:00 AM window lock) */}
-      {!isWindowOpen && myCommitments.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Your Approved Commitments ({myCommitments.length})
-              </h3>
-            </div>
-            <span className="text-[11px] text-emerald-600 font-semibold">Accepted at 5:00 AM</span>
-          </div>
-
-          <div className="space-y-2">
-            {myCommitments.map((c) => (
-              <div 
-                key={c.sku_code} 
-                className="bg-slate-100 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-between gap-3"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">{c.item_name}</div>
-                  <div className="text-xs text-emerald-600 font-bold mt-0.5">
-                    {c.committed_qty} {c.unit} approved @ ₹{c.quoted_rate}/{c.unit}
-                    {c.total_bid_qty > c.committed_qty && (
-                      <span className="text-slate-500 font-normal ml-1">
-                        (bid for {c.total_bid_qty} {c.unit})
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setBackoutSku(c);
-                    setBackoutDropQty(c.committed_qty.toString());
-                  }}
-                  className="px-2.5 py-1.5 text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/30 rounded-xl transition shrink-0"
-                  title="Report stock shortfall or release your allocation"
-                >
-                  Report Shortfall / Release
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Live Open Indent Items (Filtered by this vendor's catalog) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
             Available Requirements (Matched to your Catalogue)
           </h3>
           <span className="text-xs text-slate-500">
@@ -437,37 +528,37 @@ export default function VendorPortal({
               key={item.sku_code}
               className={`rounded-3xl border p-4 transition-all duration-200 ${
                 isFulfilled 
-                  ? 'bg-slate-50 border-slate-100 opacity-75' 
+                  ? 'bg-slate-50 border-slate-200 opacity-80' 
                   : item.status === 'PARTIALLY_FULFILLED'
-                  ? 'bg-white border-amber-500/30 shadow-sm'
-                  : 'bg-white border-slate-200 shadow-sm'
+                  ? 'bg-white border-amber-300 shadow-xs'
+                  : 'bg-white border-slate-200 shadow-xs'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900 text-base">{item.item_name}</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                    <span className="font-bold text-slate-900 text-base">{item.item_name}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">
                       {item.category}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    Pluckk Target: <strong className="text-emerald-600 font-semibold">₹{item.target_rate}/{item.unit}</strong> • Target Qty: {item.required_qty} {item.unit}
+                  <div className="text-xs text-slate-600 mt-1">
+                    Pluckk Target: <strong className="text-emerald-700 font-bold">₹{item.target_rate}/{item.unit}</strong> • Target Qty: {item.required_qty} {item.unit}
                   </div>
                 </div>
 
                 {/* Status Badges */}
                 <div>
                   {isFulfilled ? (
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                       <Lock size={12} /> Closed
                     </span>
                   ) : item.status === 'PARTIALLY_FULFILLED' ? (
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
                       {item.remaining_qty} {item.unit} Left
                     </span>
                   ) : (
-                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                       {item.remaining_qty} {item.unit} Open
                     </span>
                   )}
@@ -485,7 +576,7 @@ export default function VendorPortal({
                           {myBid.quantity} {item.unit} @ ₹{myBid.quoted_rate}/{item.unit}
                         </span>
                       </div>
-                      <span className="block text-[11px] text-slate-700 mt-0.5">
+                      <span className="block text-[11px] text-slate-600 mt-0.5">
                         ⏳ Pending 5:00 AM allocation. You can adjust your price anytime before 5:00 AM!
                       </span>
                     </div>
@@ -529,7 +620,7 @@ export default function VendorPortal({
               <div className="mt-3.5 pt-3 border-t border-slate-100">
                 {isWindowOpen ? (
                   isSelected ? (
-                    <div className="space-y-3 bg-slate-100 p-3.5 rounded-2xl border border-slate-200">
+                    <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                       <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
                         <span>{myBid ? `✏️ Adjust Quote for ${item.item_name}` : `Submit Quote for ${item.item_name}`}</span>
                         <span className="text-slate-500 text-[11px]">Pluckk Target: ₹{item.target_rate}/{item.unit}</span>
@@ -575,7 +666,7 @@ export default function VendorPortal({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setSelectedSku(null)}
-                            className="px-3 py-1.5 text-xs text-slate-500 hover:text-white"
+                            className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium"
                           >
                             Cancel
                           </button>
@@ -593,10 +684,10 @@ export default function VendorPortal({
                     <div className="flex items-center justify-between gap-2">
                       <button
                         onClick={() => handleStartQuote(item)}
-                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition shadow-sm active:scale-98 flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition shadow-xs active:scale-98 flex items-center justify-center gap-1.5 ${
                           myBid 
-                            ? 'bg-slate-100 hover:bg-slate-700 text-emerald-600 border border-slate-200' 
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            ? 'bg-slate-100 hover:bg-slate-200 text-emerald-800 border border-slate-200' 
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
                         }`}
                       >
                         <Check size={14} />
@@ -616,10 +707,10 @@ export default function VendorPortal({
                         return (
                           <div className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
                             myFffApp.status === 'ACCEPTED'
-                              ? 'bg-emerald-50 border-emerald-500/40 text-emerald-200'
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
                               : myFffApp.status === 'REJECTED'
-                              ? 'bg-red-50 border-red-500/40 text-red-200'
-                              : 'bg-amber-50 border-amber-500/40 text-amber-200'
+                              ? 'bg-red-50 border-red-300 text-red-900'
+                              : 'bg-amber-50 border-amber-300 text-amber-900'
                           }`}>
                             <div className="flex items-center justify-between font-bold">
                               <span className="flex items-center gap-1.5">
@@ -628,35 +719,35 @@ export default function VendorPortal({
                               </span>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-extrabold ${
                                 myFffApp.status === 'ACCEPTED'
-                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  ? 'bg-emerald-200 text-emerald-900'
                                   : myFffApp.status === 'REJECTED'
-                                  ? 'bg-red-500/20 text-red-300'
-                                  : 'bg-amber-500/20 text-amber-300 animate-pulse'
+                                  ? 'bg-red-200 text-red-900'
+                                  : 'bg-amber-200 text-amber-900 animate-pulse'
                               }`}>
                                 {myFffApp.status === 'ACCEPTED' ? '✅ Approved & Allocated' : myFffApp.status === 'REJECTED' ? '❌ Rejected' : '⏳ Sourcing Reviewing (In Queue)'}
                               </span>
                             </div>
 
                             <div className="text-slate-700 text-xs">
-                              Offered: <strong className="text-white">{myFffApp.quantity} {item.unit}</strong> @ <strong className="text-emerald-600 font-mono">₹{myFffApp.quoted_rate}/{item.unit}</strong>
+                              Offered: <strong className="text-slate-900">{myFffApp.quantity} {item.unit}</strong> @ <strong className="text-emerald-700 font-mono">₹{myFffApp.quoted_rate}/{item.unit}</strong>
                               <span className="text-slate-500 ml-2 font-mono text-[11px]">Logged at: {myFffApp.received_time || 'Just now'}</span>
                             </div>
 
                             {myFffApp.status === 'PENDING_APPROVAL' && (
-                              <p className="text-[11px] text-amber-300/90 leading-tight">
+                              <p className="text-[11px] text-amber-800 leading-tight">
                                 ⚡ You are in the fastest finger queue! Sourcing and Admin have Accept & Reject buttons on their console and are reviewing applications in real-time.
                               </p>
                             )}
 
                             {myFffApp.status === 'ACCEPTED' && (
-                              <p className="text-[11px] text-emerald-300/90 font-medium">
-                                🎉 Your application was accepted! {myFffApp.allocated_qty || myFffApp.quantity} {item.unit} commitment is confirmed.
+                              <p className="text-[11px] text-emerald-800 font-medium">
+                                🎉 Your application was accepted! {myFffApp.allocated_qty || myFffApp.quantity} {item.unit} commitment is confirmed. Check "My Orders" tab on left.
                               </p>
                             )}
 
                             {myFffApp.status === 'REJECTED' && (
                               <div className="pt-1 flex items-center justify-between">
-                                <span className="text-[11px] text-red-300">Demand still open ({item.remaining_qty} {item.unit}). You may re-apply:</span>
+                                <span className="text-[11px] text-red-700">Demand still open ({item.remaining_qty} {item.unit}). You may re-apply:</span>
                                 <button
                                   onClick={() => {
                                     setFffApplyingSku(item.sku_code);
@@ -677,13 +768,13 @@ export default function VendorPortal({
                       const isApplying = fffApplyingSku === item.sku_code;
 
                       return (
-                        <div className="bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900 border border-amber-500/50 p-3.5 rounded-2xl space-y-3 shadow-md">
+                        <div className="bg-amber-50/80 border border-amber-300 p-3.5 rounded-2xl space-y-3 shadow-xs">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
+                            <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
                               <Zap size={14} className="text-amber-600 animate-bounce" />
                               <span>⚡ ROUND 2: FASTEST FINGER FIRST (LIVE)</span>
                             </div>
-                            <span className="text-[10px] bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 rounded-full font-bold">
                               {item.remaining_qty} {item.unit} Shortfall Needed
                             </span>
                           </div>
@@ -693,7 +784,7 @@ export default function VendorPortal({
                           </p>
 
                           {isApplying ? (
-                            <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2.5">
+                            <div className="bg-white border border-amber-200 p-3 rounded-xl space-y-2.5 shadow-xs">
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
                                   <label className="text-[10px] font-semibold text-slate-700 block mb-0.5">
@@ -730,14 +821,14 @@ export default function VendorPortal({
                               <div className="flex items-center justify-end gap-2 pt-1">
                                 <button
                                   onClick={() => setFffApplyingSku(null)}
-                                  className="px-2.5 py-1 text-[11px] text-slate-500 hover:text-slate-800"
+                                  className="px-2.5 py-1 text-[11px] text-slate-600 hover:text-slate-900"
                                 >
                                   Cancel
                                 </button>
                                 <button
                                   onClick={() => handleFffSubmit(item.sku_code)}
                                   disabled={!fffQty || !fffRate || parseFloat(fffQty) <= 0 || parseFloat(fffRate) <= 0}
-                                  className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-lg text-xs shadow-sm transition active:scale-95 disabled:opacity-50 flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-lg text-xs shadow-xs transition active:scale-95 disabled:opacity-50 flex items-center gap-1"
                                 >
                                   <Zap size={12} />
                                   <span>Submit Fastest Application ⚡</span>
@@ -751,7 +842,7 @@ export default function VendorPortal({
                                 setFffQty(item.remaining_qty.toString());
                                 setFffRate((item.target_rate || 25).toString());
                               }}
-                              className="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
+                              className="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold rounded-xl text-xs shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5"
                             >
                               <Zap size={14} />
                               <span>Apply for Shortfall ({item.remaining_qty} {item.unit} Needed)</span>
@@ -761,7 +852,7 @@ export default function VendorPortal({
                       );
                     })()
                   ) : (
-                    <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center justify-center gap-2 py-2 text-xs text-slate-600 bg-slate-50 rounded-xl border border-slate-200">
                       <Lock size={13} className="text-slate-500" />
                       <span>Bidding window closed at 5:00 AM. Prices are locked.</span>
                     </div>
@@ -775,19 +866,593 @@ export default function VendorPortal({
         {/* Empty State: If vendor has no items in their catalog */}
         {visibleItems.length === 0 && (
           <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-3">
-            <Package size={36} className="mx-auto text-slate-600" />
+            <Package size={36} className="mx-auto text-slate-400" />
             <h4 className="text-sm font-bold text-slate-900">No Matching Articles in your Catalogue</h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               Your screen is set up to only show articles you supply. You currently have <strong>{mySuppliedSkus.length}</strong> articles selected in your catalogue.
             </p>
             <button
               onClick={() => setIsCatalogModalOpen(true)}
-              className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm transition"
+              className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-xs transition"
             >
               Open My Supply Catalogue
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+
+  // --------------------------------------------------------------------------
+  // View 2: My Orders ("allocated orders would appear here")
+  // --------------------------------------------------------------------------
+  const renderMyOrdersView = () => (
+    <div className="space-y-4">
+      {/* Header & PO Value Metrics Banner */}
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-5 shadow-sm space-y-4 border border-emerald-500/30">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Official Purchase Orders
+              </span>
+              <span className="text-xs text-slate-300">Daily Night Indent</span>
+            </div>
+            <h2 className="text-lg font-black text-white mt-1">My Allocated Orders & Commitments</h2>
+            <p className="text-xs text-slate-300">
+              Orders awarded to {currentVendor?.name || 'you'} locked at 5:00 AM via L1 least-cost allocation or Round 2 FFF.
+            </p>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-right">
+            <span className="text-[10px] text-emerald-300 uppercase font-bold tracking-wider block">Total PO Value</span>
+            <span className="text-xl font-black font-mono text-white">
+              ₹{totalPoAmount.toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+
+        {/* Quick Summary Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-white/10 text-xs">
+          <div className="bg-white/5 p-2.5 rounded-xl">
+            <span className="text-[10px] text-slate-300 block">Total Volume</span>
+            <span className="font-black text-sm text-white">{totalCommittedKg} kg</span>
+          </div>
+          <div className="bg-white/5 p-2.5 rounded-xl">
+            <span className="text-[10px] text-slate-300 block">Allocated Articles</span>
+            <span className="font-black text-sm text-white">{myCommitments.length} items</span>
+          </div>
+          <div className="bg-white/5 p-2.5 rounded-xl">
+            <span className="text-[10px] text-slate-300 block">Delivery DC Hub</span>
+            <span className="font-bold text-xs text-emerald-300 truncate">Turbhe APMC Gate 2</span>
+          </div>
+          <div className="bg-white/5 p-2.5 rounded-xl">
+            <span className="text-[10px] text-slate-300 block">Gate Arrival By</span>
+            <span className="font-bold text-xs text-amber-300">08:30 AM IST (Today)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Allocated Orders List */}
+      {myCommitments.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <CheckCircle2 size={15} className="text-emerald-600" />
+              <span>Confirmed Allocation Items ({myCommitments.length})</span>
+            </h3>
+            <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Ready for DC Dispatch
+            </span>
+          </div>
+
+          {myCommitments.map((order, idx) => (
+            <div 
+              key={order.sku_code || idx}
+              className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs space-y-3 hover:border-emerald-300 transition"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 text-base">{order.item_name}</h4>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">
+                      {order.category || 'Produce'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                      ✓ {order.awardType || 'Awarded Allocation'}
+                    </span>
+                    {order.timestamp && (
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        Time: {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-right bg-emerald-50/70 border border-emerald-200 px-3.5 py-1.5 rounded-2xl shrink-0">
+                  <span className="text-[10px] text-slate-500 font-semibold block">Item PO Amount</span>
+                  <span className="text-base font-black font-mono text-emerald-800">
+                    ₹{order.total_amount?.toLocaleString('en-IN') || (order.committed_qty * order.quoted_rate).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rate & Quantity Breakdown */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-500 block font-medium">Approved Quantity:</span>
+                  <span className="font-black text-slate-900 text-sm">{order.committed_qty} {order.unit}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block font-medium">Your Winning Rate:</span>
+                  <span className="font-black text-emerald-700 text-sm font-mono">₹{order.quoted_rate}/{order.unit}</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <span className="text-[10px] text-slate-500 block font-medium">Pluckk Target:</span>
+                  <span className="font-medium text-slate-600">₹{order.target_rate || order.quoted_rate}/{order.unit}</span>
+                </div>
+              </div>
+
+              {/* Delivery Note & Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Truck size={14} className="text-emerald-600 shrink-0" />
+                  <span>Dispatch in food-grade crates to Turbhe APMC Inbound Gate.</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setBackoutSku(order);
+                      setBackoutDropQty(order.committed_qty.toString());
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition shadow-xs active:scale-95"
+                    title="Report stock shortage or vehicle delay"
+                  >
+                    Report Shortfall / Release
+                  </button>
+                  <button
+                    onClick={() => alert(`📄 Pluckk Delivery Slip Generated:\n\n• Item: ${order.item_name}\n• Allocated Qty: ${order.committed_qty} ${order.unit}\n• Rate: ₹${order.quoted_rate}/${order.unit}\n• Vendor: ${currentVendor?.name}\n• Destination: Turbhe APMC Central DC Gate 2\n• Arrival Time: By 08:30 AM IST`)}
+                    className="px-3 py-1.5 text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition shadow-xs active:scale-95 flex items-center gap-1"
+                  >
+                    <Download size={13} />
+                    <span>Challan</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Empty State: If no orders are allocated yet */
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-4 shadow-xs">
+          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100">
+            <Package size={28} />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-slate-900">No Allocated Orders In This Cycle Yet</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              {isWindowOpen ? (
+                <>
+                  The bidding window is currently <strong>OPEN</strong> (12:30 AM – 5:00 AM).
+                  Pluckk evaluates all quotes and automatically allocates orders to the lowest price (L1) supplier at <strong>5:00 AM IST</strong>.
+                </>
+              ) : (
+                <>
+                  The 5:00 AM bidding cycle has locked. You do not have confirmed allocations for this cycle, or another supplier offered a lower price.
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={() => setActiveVendorMenu('live_bidding')}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs inline-flex items-center gap-2"
+            >
+              <Zap size={14} />
+              <span>Go to Live Bidding & Quote Rates</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // --------------------------------------------------------------------------
+  // View 3: Order History (Past Mandi Fulfilled Indents & Settlement Logs)
+  // --------------------------------------------------------------------------
+  const renderOrderHistoryView = () => (
+    <div className="space-y-4">
+      {/* Historical Performance Summary */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-black text-slate-900">Procurement History & Settlements</h2>
+            <p className="text-xs text-slate-500">
+              Complete archive of past mandi indents fulfilled by {currentVendor?.name || 'your firm'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl flex items-center gap-1.5">
+              <CheckCircle size={14} className="text-emerald-600" />
+              <span>100% On-Time Payouts</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Lifetime Vendor Stats Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-xs">
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase block">Delivered Volume</span>
+            <span className="font-black text-slate-900 text-base">14,850 kg</span>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase block">Total Payouts</span>
+            <span className="font-black text-emerald-700 text-base font-mono">₹4,18,500</span>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase block">Fill Rate</span>
+            <span className="font-black text-slate-900 text-base">99.4%</span>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase block">Quality Score</span>
+            <span className="font-black text-amber-700 text-base flex items-center gap-1">
+              <Star size={14} className="fill-amber-400 text-amber-500" />
+              <span>★4.8 / 5.0</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Past Indents Log */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1">
+          Recent Procurement Cycles
+        </h3>
+
+        {pastOrdersHistory.map((pastOrder) => (
+          <div 
+            key={pastOrder.id}
+            className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs space-y-3"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-mono text-xs font-bold">
+                  <Calendar size={14} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">{pastOrder.date}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{pastOrder.id}</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">{pastOrder.hub}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  ✓ {pastOrder.status}
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-lg">
+                  ₹{pastOrder.totalAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Delivered Articles Breakdown */}
+            <div className="space-y-1.5">
+              {pastOrder.items.map((it, i) => (
+                <div key={i} className="flex items-center justify-between text-xs py-1 px-2 rounded-xl bg-slate-50">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-800">{it.name}</span>
+                    <span className="text-slate-500 font-mono text-[11px]">({it.qty} {it.unit} @ ₹{it.rate}/{it.unit})</span>
+                  </div>
+                  <span className="font-mono font-bold text-slate-700">₹{it.total}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Settlement Details Footer */}
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+              <span className="font-mono">Settlement Ref: {pastOrder.utr}</span>
+              <button
+                onClick={() => alert(`📄 Payment Voucher for ${pastOrder.id}:\n\nAmount: ₹${pastOrder.totalAmount}\nPaid to: ${currentVendor?.name}\nStatus: Settled via Direct NEFT\nUTR: ${pastOrder.utr}`)}
+                className="text-emerald-700 font-bold hover:underline flex items-center gap-1"
+              >
+                <Download size={12} />
+                <span>Download Invoice</span>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // --------------------------------------------------------------------------
+  // View 4: His Catalogue (Manage and View Articles Supplied by Vendor)
+  // --------------------------------------------------------------------------
+  const renderCatalogueView = () => (
+    <div className="space-y-4">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                1-to-1 Privacy Filter
+              </span>
+            </div>
+            <h2 className="text-base font-black text-slate-900 mt-1">His Supply Catalogue</h2>
+            <p className="text-xs text-slate-500">
+              Articles mapped to <strong>{currentVendor?.name}</strong>. Only these items will appear on your live bidding screen.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsCatalogModalOpen(true)}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0"
+          >
+            <Layers size={14} />
+            <span>Edit My Supply Articles</span>
+          </button>
+        </div>
+
+        {/* Active Articles Count Pill */}
+        <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs text-emerald-900 font-medium">
+          <span>Active Supplied Articles: <strong>{mySuppliedSkus.length} of {skuMaster.length || 10} master articles</strong></span>
+          <span className="text-[11px] text-emerald-700">Prices segregated per supplier</span>
+        </div>
+      </div>
+
+      {/* Grid of Supplied Articles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {(skuMaster.length > 0 ? skuMaster : [
+          { sku_code: 'PLK-VEG-POT-01', item_name: 'Potato Agra Fresh (ज्योति आलू)', category: 'Vegetables', unit: 'kg', benchmark_price: 26 },
+          { sku_code: 'PLK-VEG-ONI-02', item_name: 'Onion Nashik Red (नाशिक लाल कांदा)', category: 'Vegetables', unit: 'kg', benchmark_price: 32 },
+          { sku_code: 'PLK-VEG-TOM-03', item_name: 'Tomato Hybrid (टमाटर)', category: 'Vegetables', unit: 'kg', benchmark_price: 24 },
+          { sku_code: 'PLK-FRU-BAN-01', item_name: 'Robusta Banana Semi-Ripe (केला)', category: 'Fruits', unit: 'kg', benchmark_price: 30 },
+          { sku_code: 'PLK-FRU-POM-02', item_name: 'Pomegranate Bhagwa (अनार)', category: 'Fruits', unit: 'kg', benchmark_price: 140 }
+        ]).map((sku) => {
+          const isSupplied = mySuppliedSkus.includes(sku.sku_code);
+
+          return (
+            <div 
+              key={sku.sku_code}
+              className={`p-4 rounded-3xl border transition ${
+                isSupplied 
+                  ? 'bg-white border-emerald-300 shadow-xs ring-1 ring-emerald-500/10' 
+                  : 'bg-slate-50 border-slate-200 opacity-60'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">{sku.item_name}</h4>
+                  <span className="text-[10px] font-mono text-slate-500 block">{sku.sku_code} • {sku.category}</span>
+                </div>
+                {isSupplied ? (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                    <Check size={10} /> Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-slate-200 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
+                    Not Supplied
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-500 text-[11px]">Pluckk Target:</span>
+                <span className="font-bold font-mono text-slate-900">₹{sku.benchmark_price || 25}/{sku.unit || 'kg'}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // --------------------------------------------------------------------------
+  // Main Render Layout
+  // --------------------------------------------------------------------------
+  if (compact) {
+    // Compact Mode (For Split View Simulator - 2 side-by-side columns)
+    return (
+      <div className="space-y-3">
+        {/* Compact Navigation Tabs Strip */}
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto">
+          <button
+            onClick={() => setActiveVendorMenu('live_bidding')}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+              activeVendorMenu === 'live_bidding'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            ⚡ Bidding ({visibleItems.length})
+          </button>
+          <button
+            onClick={() => setActiveVendorMenu('my_orders')}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+              activeVendorMenu === 'my_orders'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            📦 Orders ({myCommitments.length})
+          </button>
+          <button
+            onClick={() => setActiveVendorMenu('order_history')}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+              activeVendorMenu === 'order_history'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            📜 History
+          </button>
+          <button
+            onClick={() => setActiveVendorMenu('catalogue')}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+              activeVendorMenu === 'catalogue'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🥬 Catalogue ({mySuppliedSkus.length})
+          </button>
+        </div>
+
+        {/* Selected View */}
+        {activeVendorMenu === 'live_bidding' && renderLiveBiddingView()}
+        {activeVendorMenu === 'my_orders' && renderMyOrdersView()}
+        {activeVendorMenu === 'order_history' && renderOrderHistoryView()}
+        {activeVendorMenu === 'catalogue' && renderCatalogueView()}
+
+        {/* Modal: Vendor Supply Catalog */}
+        <VendorCatalogModal
+          isOpen={isCatalogModalOpen}
+          onClose={() => setIsCatalogModalOpen(false)}
+          vendor={currentVendor}
+          currentUser={currentUser}
+          skuMaster={skuMaster}
+          onSaveCatalog={onSaveCatalog}
+        />
+      </div>
+    );
+  }
+
+  // Full Vendor Portal Layout (Desktop Two-Column with Left Menu + Mobile Drawer)
+  return (
+    <div className="w-full">
+      {/* 📲 PWA App Install Banner for Vendors */}
+      {!isInstalled && (
+        <div className="mb-4 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border border-emerald-500/40 rounded-3xl p-3.5 flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-slate-900 text-lg shadow-md shrink-0">
+              P
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Install Pluckk Supplier App</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-semibold uppercase">Mobile PWA</span>
+              </h4>
+              <p className="text-[11px] text-slate-300">
+                Add to your phone home screen for live mandi updates & buzz alerts.
+              </p>
+            </div>
+          </div>
+
+          {installPrompt ? (
+            <button
+              onClick={handleInstallClick}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs shrink-0 active:scale-95 flex items-center gap-1.5"
+            >
+              <Smartphone size={14} />
+              <span>Install App</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => alert("📱 To install on your phone:\n\n• Android (Chrome): Tap the 3 dots (⋮) in Chrome -> 'Install app' or 'Add to Home screen'.\n\n• iPhone (Safari): Tap the Share button (⎋) at the bottom -> 'Add to Home Screen' (➕).")}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-semibold transition shrink-0 border border-slate-700"
+            >
+              <span>Install Guide 📲</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Device Notifications Opt-In */}
+      {notifPermission !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-blue-800">
+            <Bell size={14} className="text-blue-600 shrink-0" />
+            <span className="text-[11px]">Turn on sound & vibration alerts for 12:30 AM indents & shortfall broadcasts</span>
+          </div>
+          <button
+            onClick={handleEnableNotifications}
+            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition shrink-0 shadow-xs"
+          >
+            Enable Alerts
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Top Navigation Bar (Shows on screens < lg) */}
+      <div className="lg:hidden mb-4 bg-white border border-slate-200 rounded-2xl p-2 shadow-xs flex items-center gap-1 overflow-x-auto">
+        <button
+          onClick={() => setActiveVendorMenu('live_bidding')}
+          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+            activeVendorMenu === 'live_bidding'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Zap size={14} />
+          <span>Live Bidding ({visibleItems.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveVendorMenu('my_orders')}
+          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+            activeVendorMenu === 'my_orders'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Package size={14} />
+          <span>My Orders ({myCommitments.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveVendorMenu('order_history')}
+          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+            activeVendorMenu === 'order_history'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Clock size={14} />
+          <span>History</span>
+        </button>
+
+        <button
+          onClick={() => setActiveVendorMenu('catalogue')}
+          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+            activeVendorMenu === 'catalogue'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <BookOpen size={14} />
+          <span>Catalogue ({mySuppliedSkus.length})</span>
+        </button>
+
+        <button
+          onClick={handleLogoutClick}
+          className="px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition whitespace-nowrap flex items-center gap-1.5 ml-auto"
+        >
+          <LogOut size={14} />
+          <span>Sign Out</span>
+        </button>
+      </div>
+
+      {/* Main Two-Column Layout */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Sidebar Menu (Fixed on Desktop) */}
+        <aside className="hidden lg:block w-64 xl:w-72 shrink-0 bg-white border border-slate-200 rounded-3xl p-5 shadow-xs sticky top-20 min-h-[580px]">
+          {renderSidebarContent()}
+        </aside>
+
+        {/* Right Main Content Panel */}
+        <main className="flex-1 min-w-0 w-full">
+          {activeVendorMenu === 'live_bidding' && renderLiveBiddingView()}
+          {activeVendorMenu === 'my_orders' && renderMyOrdersView()}
+          {activeVendorMenu === 'order_history' && renderOrderHistoryView()}
+          {activeVendorMenu === 'catalogue' && renderCatalogueView()}
+        </main>
       </div>
 
       {/* Modal: Vendor Supply Catalog */}
@@ -803,24 +1468,24 @@ export default function VendorPortal({
       {/* Modal: Report Shortfall / Stock Release */}
       {backoutSku && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-red-500/40 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-xl">
+          <div className="bg-white border border-red-200 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-xl">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5 text-red-600 font-bold">
                 <AlertTriangle size={20} />
                 <span>Report Stock Shortfall / Release Demand</span>
               </div>
-              <button onClick={() => setBackoutSku(null)} className="text-slate-500 hover:text-white">
+              <button onClick={() => setBackoutSku(null)} className="text-slate-400 hover:text-slate-600">
                 <X size={18} />
               </button>
             </div>
 
-            <p className="text-xs text-slate-700">
+            <p className="text-xs text-slate-600">
               Reporting a stock issue or release for <strong>{backoutSku.item_name}</strong>. The system will immediately notify Pluckk and reopen the demand to alternative suppliers.
             </p>
 
             <form onSubmit={handleBackoutSubmit} className="space-y-3">
               <div>
-                <label className="text-xs text-slate-500 block mb-1">
+                <label className="text-xs text-slate-700 font-semibold block mb-1">
                   How many kg can you NOT supply? (Max {backoutSku.committed_qty} {backoutSku.unit}):
                 </label>
                 <input
@@ -836,11 +1501,11 @@ export default function VendorPortal({
               </div>
 
               <div>
-                <label className="text-xs text-slate-500 block mb-1">Reason for shortfall / stock release:</label>
+                <label className="text-xs text-slate-700 font-semibold block mb-1">Reason for shortfall / stock release:</label>
                 <select
                   value={backoutReason}
                   onChange={(e) => setBackoutReason(e.target.value)}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-red-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-red-500"
                 >
                   <option value="Poor quality batch at APMC mandi">Poor quality batch at APMC mandi</option>
                   <option value="Mandi rate skyrocketed beyond budget">Mandi rate skyrocketed beyond budget</option>
@@ -854,13 +1519,13 @@ export default function VendorPortal({
                 <button
                   type="button"
                   onClick={() => setBackoutSku(null)}
-                  className="px-3 py-2 text-xs text-slate-500 hover:text-white"
+                  className="px-3 py-2 text-xs text-slate-600 hover:text-slate-900"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-xl transition shadow-sm"
+                  className="px-4 py-2 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-xl transition shadow-xs"
                 >
                   Release Stock & Notify Pluckk
                 </button>

@@ -927,6 +927,7 @@ function MainApp() {
               skuMaster={skuMaster}
               onSaveCatalog={handleSaveCatalog}
               onApplyFFF={handleApplyFFF}
+              onLogout={handleLogout}
             />
           </div>
         )}
