@@ -9,7 +9,8 @@ client/dist/
 server/uploads/
 *.log
 
-# Environment & OS files
+# Archives
+*.zip
 .DS_Store
 Thumbs.db
 .env
