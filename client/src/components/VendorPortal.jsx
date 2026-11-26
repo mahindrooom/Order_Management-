@@ -42,6 +42,7 @@ export default function VendorPortal({
 
   // Active Menu: 'live_bidding', 'my_orders', 'order_history', 'catalogue'
   const [activeVendorMenu, setActiveVendorMenu] = useState('live_bidding');
+  const [isMobileMenuCollapsed, setIsMobileMenuCollapsed] = useState(false);
 
   const [selectedSku, setSelectedSku] = useState(null);
   const [quotedRate, setQuotedRate] = useState('');
@@ -1261,44 +1262,44 @@ export default function VendorPortal({
     // Compact Mode (For Split View Simulator - 2 side-by-side columns)
     return (
       <div className="space-y-3">
-        {/* Compact Navigation Tabs Strip */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto">
+        {/* Compact Navigation Tabs Strip (2 Clean Rows, No Horizontal Scroll) */}
+        <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
           <button
             onClick={() => setActiveVendorMenu('live_bidding')}
-            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition text-center truncate ${
               activeVendorMenu === 'live_bidding'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 bg-white border border-slate-200'
             }`}
           >
             ⚡ Bidding ({visibleItems.length})
           </button>
           <button
             onClick={() => setActiveVendorMenu('my_orders')}
-            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition text-center truncate ${
               activeVendorMenu === 'my_orders'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 bg-white border border-slate-200'
             }`}
           >
             📦 Orders ({myCommitments.length})
           </button>
           <button
             onClick={() => setActiveVendorMenu('order_history')}
-            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition text-center truncate ${
               activeVendorMenu === 'order_history'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 bg-white border border-slate-200'
             }`}
           >
-            📜 History
+            📜 Order History
           </button>
           <button
             onClick={() => setActiveVendorMenu('catalogue')}
-            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition whitespace-nowrap text-center ${
+            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition text-center truncate ${
               activeVendorMenu === 'catalogue'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 bg-white border border-slate-200'
             }`}
           >
             🥬 Catalogue ({mySuppliedSkus.length})
@@ -1380,63 +1381,138 @@ export default function VendorPortal({
         </div>
       )}
 
-      {/* Mobile Top Navigation Bar (Shows on screens < lg) */}
-      <div className="lg:hidden mb-4 bg-white border border-slate-200 rounded-2xl p-2 shadow-xs flex items-center gap-1 overflow-x-auto">
-        <button
-          onClick={() => setActiveVendorMenu('live_bidding')}
-          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
-            activeVendorMenu === 'live_bidding'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Zap size={14} />
-          <span>Live Bidding ({visibleItems.length})</span>
-        </button>
+      {/* Mobile Menu (Row-Wise Layout without Horizontal Scrolling) */}
+      <div className="lg:hidden mb-4 bg-white border border-slate-200 rounded-3xl p-3 shadow-xs space-y-1.5">
+        <div className="flex items-center justify-between px-2 pb-1">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            Supplier Menu
+          </span>
+          <button
+            onClick={() => setIsMobileMenuCollapsed(prev => !prev)}
+            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 active:scale-95 transition"
+          >
+            <span>{isMobileMenuCollapsed ? 'Expand All Rows ▼' : 'Compact View ▲'}</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => setActiveVendorMenu('my_orders')}
-          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
-            activeVendorMenu === 'my_orders'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Package size={14} />
-          <span>My Orders ({myCommitments.length})</span>
-        </button>
+        {isMobileMenuCollapsed ? (
+          /* Single active row preview when collapsed */
+          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-emerald-600 text-white shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold">
+              {activeVendorMenu === 'live_bidding' && <Zap size={16} />}
+              {activeVendorMenu === 'my_orders' && <Package size={16} />}
+              {activeVendorMenu === 'order_history' && <Clock size={16} />}
+              {activeVendorMenu === 'catalogue' && <BookOpen size={16} />}
+              <span>
+                {activeVendorMenu === 'live_bidding' && `Live Bidding (${visibleItems.length})`}
+                {activeVendorMenu === 'my_orders' && `My Orders (${myCommitments.length})`}
+                {activeVendorMenu === 'order_history' && 'Order History'}
+                {activeVendorMenu === 'catalogue' && `His Catalogue (${mySuppliedSkus.length})`}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuCollapsed(false)}
+              className="text-[10px] bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-xl font-bold transition"
+            >
+              Change Menu
+            </button>
+          </div>
+        ) : (
+          /* Full Row-Wise List */
+          <div className="space-y-1.5">
+            {/* Row 1: Live Bidding */}
+            <button
+              onClick={() => setActiveVendorMenu('live_bidding')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition text-left ${
+                activeVendorMenu === 'live_bidding'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Zap size={15} />
+                <span>Live Bidding</span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeVendorMenu === 'live_bidding' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {visibleItems.length} Open
+              </span>
+            </button>
 
-        <button
-          onClick={() => setActiveVendorMenu('order_history')}
-          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
-            activeVendorMenu === 'order_history'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Clock size={14} />
-          <span>History</span>
-        </button>
+            {/* Row 2: My Orders (Allocated) */}
+            <button
+              onClick={() => setActiveVendorMenu('my_orders')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition text-left ${
+                activeVendorMenu === 'my_orders'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Package size={15} />
+                <span>My Orders (Allocated)</span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeVendorMenu === 'my_orders' ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {myCommitments.length} Confirmed
+              </span>
+            </button>
 
-        <button
-          onClick={() => setActiveVendorMenu('catalogue')}
-          className={`px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
-            activeVendorMenu === 'catalogue'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <BookOpen size={14} />
-          <span>Catalogue ({mySuppliedSkus.length})</span>
-        </button>
+            {/* Row 3: Order History */}
+            <button
+              onClick={() => setActiveVendorMenu('order_history')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition text-left ${
+                activeVendorMenu === 'order_history'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Clock size={15} />
+                <span>Order History</span>
+              </div>
+              <span className={`text-[10px] font-semibold ${
+                activeVendorMenu === 'order_history' ? 'text-emerald-100' : 'text-slate-500'
+              }`}>
+                Past Indents & Bills
+              </span>
+            </button>
 
-        <button
-          onClick={handleLogoutClick}
-          className="px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition whitespace-nowrap flex items-center gap-1.5 ml-auto"
-        >
-          <LogOut size={14} />
-          <span>Sign Out</span>
-        </button>
+            {/* Row 4: His Catalogue */}
+            <button
+              onClick={() => setActiveVendorMenu('catalogue')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition text-left ${
+                activeVendorMenu === 'catalogue'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <BookOpen size={15} />
+                <span>His Catalogue</span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeVendorMenu === 'catalogue' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {mySuppliedSkus.length} Articles
+              </span>
+            </button>
+
+            {/* Row 5: Sign Out */}
+            <button
+              onClick={handleLogoutClick}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-bold text-red-600 bg-red-50/60 hover:bg-red-100 border border-red-100 transition mt-1"
+            >
+              <div className="flex items-center gap-2.5">
+                <LogOut size={15} />
+                <span>Sign Out</span>
+              </div>
+              <span className="text-[10px] text-red-400 font-normal">Log out of supplier portal</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Two-Column Layout */}
